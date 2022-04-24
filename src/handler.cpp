@@ -1,4 +1,5 @@
 #include "../include/handler.hpp"
+#include "../include/actor.hpp"
 
 
 MyException::MyException(){}
@@ -112,6 +113,86 @@ std::vector<std::string> get_user_and_passwd(){
 }
 
 
+void print_line(std::vector<int> sizes){
+    for (int i: sizes){
+        std::cout << "+";
+
+        for (int j=0; j<i+2; j++){
+            std::cout << "-";
+        }
+    }
+    std::cout << "+\n";
+}
+
+
+void print_data_table(const std::vector<std::string>& cols, const std::vector<std::vector<std::string>>& values){
+    if (values.size() == 0){
+        std::cout << "No Data!!\n";
+        return;
+    }
+
+    std::vector<int> sizes;
+    if (cols.size() != 0){
+        for (std::string col: cols){
+            sizes.push_back(col.size());
+        }
+    }
+    for (auto row: values){
+        int i=0;
+        for (auto val: row){
+            sizes[i] = sizes.at(i) > val.size() ? sizes.at(i) : val.size();
+            i++;
+        }
+    }
+
+    print_line(sizes);
+
+    if (cols.size() != 0){
+        int i=0;
+        for (auto col: cols){
+            std::cout << "| " << col << " ";
+            for (int j=0; j<sizes[i]-col.size(); j++){
+                std::cout << " ";
+            }
+            i++;
+        }
+        std::cout << "|\n";
+        print_line(sizes);
+    }
+
+    for (auto row: values){
+        int i=0;
+        for (auto val: row){
+            std::cout << "| " << val << " ";
+            for (int j=0; j<sizes[i]-val.size(); j++){
+                std::cout << " ";
+            }
+            i++;
+        }
+        std::cout << "|\n";
+    }
+    print_line(sizes);
+
+}
+
+
+std::string passwd_to_SHA256(const std::string& salt, const std::string& passwd){
+    std::string sp = salt + passwd;
+
+    unsigned char buf[HASH_LENGTH_INT];
+    SHA256_CTX sha256;
+    SHA256_Init(&sha256);
+    SHA256_Update(&sha256, sp.c_str(), sp.size());
+    SHA256_Final(buf, &sha256);
+
+    std::stringstream ss;
+    for(int i = 0; i < HASH_LENGTH_INT; i++)
+        ss << std::hex << std::setw(2) << std::setfill('0') << (int)buf[i];
+
+    return ss.str();
+}
+
+
 bool check_value(std::string value){
     if (value.find("'") != value.npos || value.find("\"") != value.npos)
         return false;
@@ -171,10 +252,22 @@ void insert_all(sql::Statement *stmt, std::string table, std::vector<std::vector
 }
 
 
-void delete_val(sql::Statement* stmt, std::string table, std::string column, std::string value){
+std::string get_val(sql::Statement *stmt, std::string db, std::string table, std::string col_to_get, std::string pk_col, std::string val){
+    sql::ResultSet *rset = EXECQ("SELECT " + col_to_get + " FROM " + db + "." + table + " WHERE " + pk_col + "='" + val + "'");
+    if (rset->next()){
+        return rset->getString(1);
+    }
+    else {
+        return NULL_STR;
+    }
+}
+
+
+void delete_val(sql::Statement* stmt, std::string db, std::string table, std::string column, std::string value){
     validate_value(value);
     validate_value(column);
-    EXEC("DELETE FROM " + table + "where " + column + "=" + value);
+    USE_DB(db);
+    EXEC("DELETE FROM " + table + "where " + column + "='" + value + "'");
 }
 
 
@@ -186,4 +279,67 @@ std::string get_current_date(){
     strftime(tm_now, sizeof(tm_now), "%Y-%m-%d", now);
 
     return tm_now;
+}
+
+
+std::string get_user_type(sql::Statement *stmt, std::string id){
+    USE_DB(AIMS_DB);
+    sql::ResultSet *rset = EXECQ("SELECT * from " ADMIN " where id='" + id + "'");
+    if (rset->next())
+        return ADMIN;
+
+    rset = EXECQ("SELECT * from " STUDENT " where id='" + id + "'");
+    if (rset->next())
+        return STUDENT;
+
+    rset = EXECQ("SELECT * from " FACULTY " where id='" + id + "'");
+    if (rset->next())
+        return FACULTY;
+
+    return NULL_STR;
+}
+
+
+std::string input(const std::string prompt){
+    std::string temp;
+    std::cout << prompt;
+    std::cin >> temp;
+    if (std::cin.eof())
+        throw EOFException();
+    
+    return temp;
+}
+
+
+int input_int(const std::string prompt){
+    int temp;
+    std::cout << prompt;
+    std::cin >> temp;
+    if (std::cin.eof())
+        throw EOFException();
+    
+    return temp;
+}
+
+
+int get_choice(int low, int high){
+    int op = input_int("Enter a choice: ");
+    while (op < low || op > high){
+        std::cout << "Invalid choice!!" << std::endl;
+        op = input_int("Enter a choice: ");
+    }
+    return op;
+}
+
+
+std::vector<std::string> update_data(std::vector<std::string> cols, std::vector<std::string> values){
+    std::vector<std::string> new_data;
+    for (int i=0; i<cols.size(); i++){
+        std::string data = input(cols.at(i) + " (" + values.at(i) + "): ");
+        if (data == "*")
+            new_data.push_back(values.at(i));
+        else
+            new_data.push_back(data);
+    }
+    return new_data;
 }

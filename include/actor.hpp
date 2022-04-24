@@ -1,8 +1,11 @@
+#ifndef _ACTOR
+#define _ACTOR
+
+
 #include <iostream>
 #include <string>
 #include <vector>
 #include <map>
-#include <openssl/sha.h>
 
 // MySQL Connection headers
 #include <mysql_connection.h>
@@ -10,31 +13,6 @@
 #include <cppconn/driver.h>
 #include <cppconn/statement.h>
 
-
-// Database names
-#define AIMS_DB "aims_db"
-#define AIMS_STU "aims_stu"
-#define AIMS_COURSE "aims_course"
-
-// Table Names
-#define ADMIN "Admin"
-#define FACULTY "Faculty"
-#define STUDENT "Student"
-#define COURSE "Course"
-#define SEMESTER "Semester"
-
-// SQL commands
-#define CREATE_DB "CREATE DATABASE IF NOT EXISTS "
-#define DROP_DB "DROP DATABASE IF EXISTS "
-
-// # DEFAULTS
-
-// The password is : '1234' and salt is 'abcd'
-#define PASSWORD "e9cee71ab932fde863338d08be4de9dfe39ea049bdafb342ce659ec5450b69ae" 
-#define SALT "abcd"
-
-// Other constants
-#define HASH_LENGTH "64"
 
 
 class Actor {
@@ -44,7 +22,7 @@ class Actor {
     std::string passwd;        // hashed password
     std::string salt;
     std::string table;
-    std::string current_sem;
+    // std::string current_sem;
     sql::Driver *driver;
     sql::Connection *conn;
     sql::Statement *stmt;
@@ -52,10 +30,11 @@ class Actor {
 
     public:
     std::string get_table();
-    uint32_t get_num_cols();
-    std::vector<std::vector<std::string>> get_all_data();
+    uint32_t get_num_cols(std::string="", std::string="");
+    std::vector<std::string> get_cols(std::string, std::string);
+    std::vector<std::vector<std::string>> get_all_data(std::string="", std::string="");
     std::vector<std::vector<std::string>> get_multiple_data(std::string, std::string);
-    std::vector<std::string> get_data(std::string, std::string);
+    std::vector<std::string> get_data(std::string, std::string, std::string, std::string);
     void get_data_in_vars();
     bool authenticate(std::string);
     std::string get_id();
@@ -72,12 +51,14 @@ class Admin: public Actor {
     Admin(sql::Statement*);
     Admin(const std::string&);
     Admin(sql::Statement*, const std::string&);
+    sql::Statement* get_stmt();
     void get_data_in_vars();
     void init();
     void insert_default_data();
     void clear_all();
     void reset();
     void add_semester(const std::vector<std::string>&);
+    void remove_semester(const std::string&);
     void add_course(const std::vector<std::string>&);
     void add_courses(const std::vector<std::vector<std::string>>&);
     void remove_course(const std::string&);
@@ -120,7 +101,11 @@ class Faculty: public Actor {
     Faculty(const std::string&);
     Faculty(sql::Statement*, const std::string&);
     void get_data_in_vars();
-    std::vector<std::string> get_student_ids();
+    std::vector<std::vector<std::string>> get_courses();
+    std::vector<std::vector<std::string>> get_reg_students(const std::string&);
     bool submit_grades();
     // Can submit from csv, edit a file or from terminal one by one
 };
+
+
+#endif

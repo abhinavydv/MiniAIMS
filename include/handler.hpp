@@ -1,10 +1,18 @@
+#ifndef _HANDLER
+#define _HANDLER
+
+
 #include <iostream>
+#include <stdlib.h>
 #include <string>
 #include <vector>
 #include <map>
 #include <fstream>
+#include <iomanip>
 #include <sstream>
 #include <ctime>
+#include <openssl/sha.h>
+
 
 // includes for MySQL
 #include <mysql_connection.h>
@@ -13,9 +21,28 @@
 #include <cppconn/statement.h>
 
 
-#define ENV_FILE "./.env"
-#define USER_KEY "USER_NAME"
-#define PASSWD_KEY "PASSWD"
+
+// Database names
+#define AIMS_DB "aims_db"
+#define AIMS_STU "aims_stu"
+#define AIMS_COURSE "aims_course"
+
+// Table Names
+#define ADMIN "Admin"
+#define FACULTY "Faculty"
+#define STUDENT "Student"
+#define COURSE "Course"
+#define SEMESTER "Semester"
+
+// SQL commands
+#define CREATE_DB "CREATE DATABASE IF NOT EXISTS "
+#define DROP_DB "DROP DATABASE IF EXISTS "
+
+// DEFAULTS
+// The password is : '1234'
+#define PASSWORD "e9cee71ab932fde863338d08be4de9dfe39ea049bdafb342ce659ec5450b69ae" 
+#define SALT "abcd"
+
 
 // colors
 #define NO_COLOR "\033[1;0m"
@@ -23,13 +50,38 @@
 #define GREEN "\033[1;32m"
 #define YELLOW "\033[1;33m"
 
-// other constants
+// Other constants
+#define HASH_LENGTH "64"
+#define HASH_LENGTH_INT 32
+#define ENV_FILE "./.env"
+#define USER_KEY "USER_NAME"
+#define PASSWD_KEY "PASSWD"
 #define NULL_STR ""
 
 // Frequent Functions
 #define EXEC(sql) stmt->execute(sql);
 #define EXECQ(sql) stmt->executeQuery(sql);
 #define USE_DB(db) EXEC("use" + std::string(" ") + db)
+
+
+const std::map<short, char> dec_to_hex= {
+    {0, '0'},
+    {1, '1'},
+    {2, '2'},
+    {3, '3'},
+    {4, '4'},
+    {5, '5'},
+    {6, '6'},
+    {7, '7'},
+    {8, '8'},
+    {9, '9'},
+    {10, 'a'},
+    {11, 'b'},
+    {12, 'c'},
+    {13, 'd'},
+    {14, 'e'},
+    {15, 'f'}
+};
 
 
 std::vector<std::string> str_split(std::string, char);
@@ -40,10 +92,9 @@ std::vector<std::string> readlines_file(std::string);
 std::map<std::string, std::string> loadenv();
 std::vector<std::string> get_user_and_passwd();
 
-std::vector<std::string> format_data(std::vector<std::string>, std::vector<std::vector<std::string>>); // return formatted data
+void print_data_table(const std::vector<std::string>&, const std::vector<std::vector<std::string>>&);
 
-std::string hex_to_string(const unsigned char*, size_t);
-std::string passwd_to_SHA256(std::string);
+std::string passwd_to_SHA256(const std::string&, const std::string&);
 
 
 bool check_value();
@@ -51,14 +102,25 @@ void validate_value(std::string);
 // table_name, values, column_names
 void insert_val(sql::Statement*, std::string, std::vector<std::string>, std::vector<std::string>);
 void insert_all(sql::Statement*, std::string, std::vector<std::vector<std::string>>, std::vector<std::string>);
-void use_db(sql::Statement*, std::string);
+// void use_db(sql::Statement*, std::string);
 
-void delete_val(sql::Statement*, std::string, std::string, std::string);
+std::string get_val(sql::Statement*, std::string, std::string, std::string, std::string, std::string);
+
+void delete_val(sql::Statement*, std::string, std::string, std::string, std::string);
 
 bool check_integrity(sql::Statement*, std::string, std::string, std::string);
 
 std::string get_current_date();
 
+std::string get_user_type(sql::Statement*, std::string);
+
+std::string input(const std::string="");
+
+int input_int(const std::string="");
+
+int get_choice(int, int);
+
+std::vector<std::string> update_data(std::vector<std::string>, std::vector<std::string>);
 
 
 // Constant vars
@@ -77,10 +139,19 @@ const std::map<std::string, int> grade_to_gpa = {
 
 
 
-// Classes
+// Exception Classes
 
 class MyException: public std::exception {
     public:
     MyException();
     MyException(std::string);
 };
+
+
+class EOFException: public std::exception {};
+
+
+class LineReachedException: public std::exception {};
+
+
+#endif
