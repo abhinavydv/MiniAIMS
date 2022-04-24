@@ -270,8 +270,8 @@ void Admin::add_student_to_IITH(const std::vector<std::string> &student){
     insert_val(stmt, STUDENT, student, {});
 
     USE_DB(AIMS_STU);
-    EXEC("CREATE TABLE stu_" + student[0] + " (CourseCode varchar(32) PRIMARY KEY, "
-    "Semester varchar(50), RegDate date, grade char(2))");
+    EXEC("CREATE TABLE stu_" + student[0] + " (CourseCode varchar(32), "
+    "Semester varchar(50), RegistrationDate date, grade char(2), PRIMARY KEY(CourseCode, Semester))");
 }
 
 
