@@ -16,7 +16,6 @@ bool handle_admin(sql::Statement* stmt, string id){
     cout << msg;
 
     int op = get_choice(1, 6);
-    cout << "\n";
     try{
         if (op == 1)
             while (true)
@@ -37,7 +36,7 @@ bool handle_admin(sql::Statement* stmt, string id){
 
         throw LineReachedException();
     }
-    catch (EOFException){
+    catch (BackException){
         return false;
     }
 }
@@ -59,8 +58,8 @@ void update_sem(Admin& admin){
             }
             vector<string> sem = {name};
 
-            sem.push_back(input("Enter start date (yyyy-mm-dd): "));
-            sem.push_back(input("Enter end date (yyyy-mm-dd): "));
+            sem.push_back(input_date("Enter start date (yyyy-mm-dd): "));
+            sem.push_back(input_date("Enter end date (yyyy-mm-dd): "));
             string type = input("Enter type ('Even' or 'Odd'): ");
             while (type != "Even" && type != "Odd"){
                 cout << "Invalid type!!" << "\n";
@@ -83,7 +82,7 @@ void update_sem(Admin& admin){
             admin.remove_semester(name);
         }
     }
-    catch (EOFException){}
+    catch (BackException){}
 
 }
 
@@ -118,11 +117,11 @@ void update_courses(Admin& admin){
     }
     else if(op == 2){
         auto data = admin.get_all_data(AIMS_DB, COURSE);
-        cout << "All course data is:\n\n";
-        print_data_table(admin.get_cols(AIMS_DB, COURSE), data);
+        // cout << "All course data is:\n\n";
+        // print_data_table(admin.get_cols(AIMS_DB, COURSE), data);
 
         string code = input("Enter Course code: ");
-        while (get_val(stmt, AIMS_DB, COURSE, "Name", "Name", code) == ""){
+        while (get_val(stmt, AIMS_DB, COURSE, "Name", "Code", code) == ""){
             cout << YELLOW "Course does not exists!!" << "\n" NO_COLOR;
             code = input("Enter Course code: ");
         }
@@ -130,26 +129,15 @@ void update_courses(Admin& admin){
     }
     else if (op == 3){
         string code = input("Enter Course code: ");
-        while (get_val(stmt, AIMS_DB, COURSE, "Name", "Name", code) == ""){
+        while (get_val(stmt, AIMS_DB, COURSE, "Name", "Code", code) == ""){
             cout << YELLOW "Course does not exists!!\n" NO_COLOR;
             code = input("Enter Course code: ");
         }
         auto data = admin.get_data(AIMS_DB, COURSE, "Code", code);
-        
-        cout << "Data of this course: \n";
         auto cols = admin.get_cols(AIMS_DB, COURSE);
-        print_data_table(cols, {data});
-        cout << "\n";
 
-        cout << "Enter values for columns (Enter \"*\" to keep previous value): \n";
-        cout << YELLOW "You cannot update code and semester. To change them, remove the course"
-        " and add again (will result in loss of registered student data)\n\n" NO_COLOR;
-        update:
-        auto new_data = update_data(cols, data);
-        if (new_data.at(0) != data.at(0) || new_data.at(4) != data.at(4)){
-            cout << YELLOW "Cannot change code or semester. Enter again:\n" NO_COLOR;
-            goto update;
-        }
+        auto new_data = update_data(cols, data, {0, 4});
+
         USE_DB(AIMS_DB);
         EXEC("DELETE FROM " COURSE " where Code='" + data.at(0) + "' and Semester='" + data.at(4) + "'");
         insert_val(stmt, COURSE, new_data, {});
@@ -165,15 +153,104 @@ void update_students(Admin& admin){
                     "5. Update student data\n\n";
     
     cout << msg;
-    
     sql::Statement* stmt = admin.get_stmt();
-
     int op = get_choice(1, 5);
+
+    if (op == 1){
+        string id = input("Enter Student ID: ");
+        while (get_val(stmt, AIMS_DB, STUDENT, "ID", "ID", id) != ""){
+            cout << YELLOW "This student already exists! Enter again.\n" NO_COLOR;
+            id = input("Enter Student ID: ");
+        }
+        vector<string> student = {id};
+        student.push_back(input("Enter Name: "));
+        student.push_back(input_date("Enter Date of birth (yyyy-mm-dd): "));
+        student.push_back(get_current_date());
+        student.push_back(input("Enter Father's name: "));
+        student.push_back(input("Enter Mother's name: "));
+        string passwd = input("Enter password: ");
+        string salt = generate_salt();
+        student.push_back(passwd_to_SHA256(salt, passwd));
+        student.push_back(salt);
+        admin.add_student_to_IITH(student);
+    }
+    else {
+        string id = input("Enter Student ID: ");
+        while (get_val(stmt, AIMS_DB, STUDENT, "ID", "ID", id) == ""){
+            cout << YELLOW "This student does not exist! Enter again.\n" NO_COLOR;
+            id = input("Enter Student ID: ");
+        }
+        if (op == 2)
+            admin.remove_student_from_IITH(id);
+        else if (op == 3){
+            string code = input("Enter Course code: ");
+            while (get_val(stmt, AIMS_DB, COURSE, "CourseCode", "CourseCode", code) == ""){
+                cout << YELLOW "Course does not exists!!" << "\n" NO_COLOR;
+                code = input("Enter Course code: ");
+            }
+            admin.add_student_to_course(id, code);
+        }
+        else if (op == 4){
+            string code = input("Enter Course code: ");
+            while (get_val(stmt, AIMS_STU, "stu_" + id, "CourseCode", "CourseCode", code) == ""){
+                cout << YELLOW "Student isn't registered in this course!!" << "\n" NO_COLOR;
+                code = input("Enter Course code: ");
+            }
+            admin.remove_student_from_course(id, code);
+        }
+        else if (op == 5){
+            auto data = admin.get_data(AIMS_DB, STUDENT, "ID", id);
+            auto cols = admin.get_cols(AIMS_DB, STUDENT);
+            auto new_data = update_data(cols, data, {0});
+            delete_val(stmt, AIMS_DB, STUDENT, "ID", id);
+            USE_DB(AIMS_DB);
+            insert_val(stmt, STUDENT, new_data, {});
+        }
+    }
 }
 
 
 void update_faculty(Admin& admin){
+    std::string msg = "1. Add Faculty\n"
+                    "2. Remove Faculty\n"
+                    "3. Update Faculty\n\n";
 
+    cout << msg;
+    sql::Statement* stmt = admin.get_stmt();
+    int op = get_choice(1, 3);
+
+    if (op == 1){
+        string id = input("Enter Faculty ID: ");
+        while (get_val(stmt, AIMS_DB, FACULTY, "ID", "ID", id) != ""){
+            cout << YELLOW "This Faculty already exists! Enter again.\n" NO_COLOR;
+            id = input("Enter Faculty ID: ");
+        }
+        vector<string> faculty = {id};
+        faculty.push_back(input("Enter Name: "));
+        faculty.push_back(get_current_date());
+        string passwd = input("Enter password: ");
+        string salt = generate_salt();
+        faculty.push_back(passwd_to_SHA256(salt, passwd));
+        faculty.push_back(salt);
+        admin.add_faculty(faculty);
+    }
+    else {
+        string id = input("Enter Faculty ID: ");
+        while (get_val(stmt, AIMS_DB, FACULTY, "ID", "ID", id) == ""){
+            cout << YELLOW "This Faculty does not exist! Enter again.\n" NO_COLOR;
+            id = input("Enter Faculty ID: ");
+        }
+        if (op == 2){
+            admin.remove_faculty(id);
+        }
+        else if (op == 3) {
+            auto data = admin.get_data(AIMS_DB, FACULTY, "ID", id);
+            auto cols = admin.get_cols(AIMS_DB, FACULTY);
+            auto new_data = update_data(cols, data, {0});
+            delete_val(stmt, AIMS_DB, FACULTY, "ID", id);
+            USE_DB(AIMS_DB);
+            insert_val(stmt, FACULTY, new_data, {});
+        }
+    }
 }
-
 

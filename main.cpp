@@ -5,9 +5,6 @@
 using namespace std;
 
 
-#define RSET sql::ResultSet*
-
-
 void first_run();
 bool main_prompt(sql::Statement*);
 pair<string, string> login(sql::Statement*);
@@ -24,7 +21,9 @@ int main(){
     sql::Statement *stmt = conn->createStatement();
 
 
-    cout << "WELCOME TO AIMS\n===============" << endl;
+    cout << "WELCOME TO AIMS\n===============\n" << 
+    "Enter .b (without quotes) anywhere to go one step back" << 
+    ", .l anywhere to logout and .q anywhere to quit." << endl;
 
     bool done = false;
     while (!done){
@@ -50,7 +49,7 @@ bool main_prompt(sql::Statement *stmt){
     try{
         iu = login(stmt);
     }
-    catch (EOFException){
+    catch (BackException){
         return true;
     }
 
@@ -64,7 +63,7 @@ bool main_prompt(sql::Statement *stmt){
         else if (iu.second == FACULTY)
             done = handle_faculty(stmt, iu.first);
     }
-    catch (EOFException){
+    catch (BackException){
         return false;
     }
 

@@ -90,8 +90,9 @@ class Student: public Actor {
     void get_data_in_vars();
     void reg_course(const std::string&);
     void dereg_course(const std::string&);
-    std::string view_courses();
+    std::pair<std::vector<std::string>, std::vector<std::vector<std::string>>> get_courses();
     double gpa_in_sem(const std::string&);
+    std::vector<std::string> get_sems();
     double calc_CGPA();
 };
 

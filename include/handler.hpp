@@ -84,6 +84,7 @@ const std::map<short, char> dec_to_hex= {
 };
 
 
+bool is_digit(std::string);
 std::vector<std::string> str_split(std::string, char);
 std::string str_strip(std::string, char=' ');
 std::pair<std::string, std::string> split_pair(std::string, char, bool=false);
@@ -94,15 +95,14 @@ std::vector<std::string> get_user_and_passwd();
 
 void print_data_table(const std::vector<std::string>&, const std::vector<std::vector<std::string>>&);
 
+std::string generate_salt(size_t=32);
 std::string passwd_to_SHA256(const std::string&, const std::string&);
 
 
-bool check_value();
+bool check_value(std::string);
 void validate_value(std::string);
-// table_name, values, column_names
 void insert_val(sql::Statement*, std::string, std::vector<std::string>, std::vector<std::string>);
 void insert_all(sql::Statement*, std::string, std::vector<std::vector<std::string>>, std::vector<std::string>);
-// void use_db(sql::Statement*, std::string);
 
 std::string get_val(sql::Statement*, std::string, std::string, std::string, std::string, std::string);
 
@@ -114,13 +114,16 @@ std::string get_current_date();
 
 std::string get_user_type(sql::Statement*, std::string);
 
-std::string input(const std::string="");
+std::string input(const std::string="", bool=false);
 
 int input_int(const std::string="");
+std::string input_date(std::string="");
 
 int get_choice(int, int);
 
-std::vector<std::string> update_data(std::vector<std::string>, std::vector<std::string>);
+std::vector<std::string> update_data(std::vector<std::string>, std::vector<std::string>, std::vector<int>);
+
+bool confirm(std::string="");
 
 
 // Constant vars
@@ -149,8 +152,9 @@ class MyException: public std::exception {
 
 
 class EOFException: public std::exception {};
-
-
+class BackException: public std::exception {};
+class LogoutException: public std::exception {};
+class QuitException: public std::exception {};
 class LineReachedException: public std::exception {};
 
 

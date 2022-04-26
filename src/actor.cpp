@@ -237,8 +237,10 @@ void Admin::add_course(const std::vector<std::string> &course){
 
     // Create the table for this course
     USE_DB(AIMS_COURSE);
+    // EXEC("CREATE TABLE course_" + course[0] + "_" + course[3] + " (StudentId varchar(32) PRIMARY KEY, "
+    // "Grade char(2), FOREIGN KEY(StudentId) REFERENCES " AIMS_DB "." STUDENT "(ID))");
     EXEC("CREATE TABLE course_" + course[0] + "_" + course[3] + " (StudentId varchar(32) PRIMARY KEY, "
-    "Grade char(2), FOREIGN KEY(StudentId) REFERENCES " AIMS_DB "." STUDENT "(ID))");
+    "Grade char(2))");
 }
 
 
@@ -426,6 +428,24 @@ void Student::dereg_course(const std::string& code){
 }
 
 
+std::pair<std::vector<std::string>, std::vector<std::vector<std::string>>> Student::get_courses(){
+    std::vector<std::vector<std::string>> courses;
+    rset = EXECQ("SELECT s.CourseCode, c.Name, c.Credits, c.Semester, c.Segment, f.Name, s.RegistrationDate, s.Grade "
+                    "FROM " AIMS_STU ".stu_" + id + " as s LEFT JOIN " AIMS_DB "." COURSE " as c ON s.CourseCode = c.Code AND s.Semester = c.Semester "
+                    "LEFT JOIN " AIMS_DB "." FACULTY " as f ON s.InstructorId = f.ID LEFT JOIN " AIMS_DB "." SEMESTER " as sm ON s.Semester = sm.Name ORDER BY sm.Start");
+    int num_cols = 8;
+    std::vector<std::string> cols = {"Code", "Course", "Credits", "Semester", "Segment", "Instructor", "Reg. Date", "Grade"};
+    while (rset->next()){
+        std::vector<std::string> course;
+        for (int i=0; i<num_cols; i++){
+            course.push_back(rset->getString(i+1));
+        }
+        courses.push_back(course);
+    }
+    return std::make_pair(cols, courses);
+}
+
+
 double Student::gpa_in_sem(const std::string& sem){
     double gpa = 0;
     std::string grade;
@@ -448,21 +468,28 @@ double Student::gpa_in_sem(const std::string& sem){
 }
 
 
-double Student::calc_CGPA(){
-    double cgpa = 0;
-
+std::vector<std::string> Student::get_sems(){
     USE_DB(AIMS_STU);
-
     rset = EXECQ("SELECT DISTINCT Semester FROM stu_" + id);
 
-    int num_sems = 0;
-
+    std::vector<std::string> sems;
     while (rset->next()){
-        num_sems++;
-        cgpa += gpa_in_sem(rset->getString(1));
+        sems.push_back(rset->getString(1));
     }
+    return sems;
+}
 
-    return cgpa / num_sems;
+
+double Student::calc_CGPA(){
+    double cgpa = 0;
+    auto sems = get_sems();
+    for (auto sem: sems){
+        cgpa += gpa_in_sem(sem);
+    }
+    if (sems.size() == 0)
+        return 0;
+
+    return cgpa / sems.size();
 }
 
 
@@ -530,7 +557,6 @@ std::vector<std::vector<std::string>> Faculty::get_courses(){
 }
 
 
-// FIXIT
 std::vector<std::vector<std::string>> Faculty::get_reg_students(const std::string& course_code){
     std::string sem = get_val(stmt, AIMS_COURSE, COURSE, "Semester", "Code", course_code);
 

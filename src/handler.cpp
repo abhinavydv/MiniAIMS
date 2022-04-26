@@ -10,6 +10,15 @@ MyException::MyException(std::string msg){
 }
 
 
+bool is_digit(std::string str){
+    for (char c: str){
+        if (c < 48 || c > 57)
+            return false;
+    }
+    return true;
+}
+
+
 std::vector<std::string> str_split(std::string str, char delim){
     std::vector<std::string> result;
     int index = 0;
@@ -176,6 +185,18 @@ void print_data_table(const std::vector<std::string>& cols, const std::vector<st
 }
 
 
+std::string generate_salt(size_t size){
+    std::string salt;
+    srand(time(NULL));
+    char characters[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890~!@#$%^&*()_-=_+{}[]|\\;:.,<>/?`~";
+    for (size_t i=0; i<size; i++){
+        salt.push_back(characters[rand()%sizeof(characters)]);
+    }
+
+    return salt;
+}
+
+
 std::string passwd_to_SHA256(const std::string& salt, const std::string& passwd){
     std::string sp = salt + passwd;
 
@@ -253,6 +274,9 @@ void insert_all(sql::Statement *stmt, std::string table, std::vector<std::vector
 
 
 std::string get_val(sql::Statement *stmt, std::string db, std::string table, std::string col_to_get, std::string pk_col, std::string val){
+    validate_value(col_to_get);
+    validate_value(val);
+    validate_value(pk_col);
     sql::ResultSet *rset = EXECQ("SELECT " + col_to_get + " FROM " + db + "." + table + " WHERE " + pk_col + "='" + val + "'");
     if (rset->next()){
         return rset->getString(1);
@@ -274,7 +298,7 @@ void delete_val(sql::Statement* stmt, std::string db, std::string table, std::st
 std::string get_current_date(){
     std::time_t t = std::time(0);
     std::tm *now = std::localtime(&t);
-    
+
     char tm_now[11];
     strftime(tm_now, sizeof(tm_now), "%Y-%m-%d", now);
 
@@ -300,25 +324,61 @@ std::string get_user_type(sql::Statement *stmt, std::string id){
 }
 
 
-std::string input(const std::string prompt){
+std::string input(const std::string prompt, bool allow_empty){
     std::string temp;
-    std::cout << prompt;
-    std::cin >> temp;
-    if (std::cin.eof())
-        throw EOFException();
-    
+    while (temp == ""){
+        std::cout << prompt;
+        std::getline(std::cin, temp);
+        if (std::cin.eof())
+            throw EOFException();
+        if (temp == "" && allow_empty)
+            break;
+
+        else if (temp == ".b")
+            throw BackException();
+        else if (temp == ".l")
+            if (confirm("Do you really want to logout?"))
+                throw LogoutException();
+            else
+                temp = "";
+        else if (temp == ".q")
+            if (confirm("Do you really want to quit?"))
+                throw QuitException();
+            else
+                temp = "";
+        else if (temp == ".c"){
+            temp = "";
+            system("clear");
+        }
+    }
+
     return temp;
 }
 
 
 int input_int(const std::string prompt){
-    int temp;
-    std::cout << prompt;
-    std::cin >> temp;
-    if (std::cin.eof())
-        throw EOFException();
-    
-    return temp;
+    return std::stol(input(prompt));
+}
+
+
+std::string input_date(std::string prompt){
+    std::string date;
+    std::vector<std::string> ymd;
+    while (date == ""){
+        date = input(prompt);
+        ymd = str_split(date, '-');
+        if (ymd.size() != 3)
+            date = "";
+        else {
+            tm t;
+            if (!strptime(date.c_str(), "%y%m%d", &t))
+                date = "";
+        }
+        if (date == "")
+            std::cout << YELLOW "Invalid date!!" NO_COLOR;
+    }
+
+    return date;
 }
 
 
@@ -332,14 +392,46 @@ int get_choice(int low, int high){
 }
 
 
-std::vector<std::string> update_data(std::vector<std::string> cols, std::vector<std::string> values){
+std::vector<std::string> update_data(std::vector<std::string> cols, std::vector<std::string> values, std::vector<int> non_updatables){
     std::vector<std::string> new_data;
+    std::sort(non_updatables.begin(), non_updatables.end());
+    std::cout << "Enter values for columns (Press enter without any value to keep previous value): \n";
     for (int i=0; i<cols.size(); i++){
-        std::string data = input(cols.at(i) + " (" + values.at(i) + "): ");
-        if (data == "*")
+        if (std::binary_search(non_updatables.begin(), non_updatables.end(), i)){
+            new_data.push_back(values.at(i));
+            continue;
+        }
+        std::string data = input(cols.at(i) + " (" + values.at(i) + "): ", true);
+        if (data == "")
             new_data.push_back(values.at(i));
         else
             new_data.push_back(data);
     }
     return new_data;
+}
+
+
+bool confirm(std::string prompt){
+    if (prompt == "")
+        prompt = "Are you sure? (Y or N): ";
+
+    std::string yn;
+
+    std::cout << prompt << " (Y or N): ";
+    while (yn == ""){
+        std::getline(std::cin, yn);
+        if (std::cin.eof())
+            throw EOFException();
+        if (yn == "Y" || yn == "y")
+            return true;
+        else if (yn == "N" || yn == "n")
+            return false;
+        else {
+            std::cout << "Wrong choice!\nEnter Y or N: ";
+            yn = "";
+        }
+    }
+    throw LineReachedException();
+
+    
 }
