@@ -13,6 +13,11 @@ std::string Actor::get_table(){
 }
 
 
+std::string Actor::get_id(){
+    return id;
+}
+
+
 uint32_t Actor::get_num_cols(std::string db, std::string table){
     if (db == "")
         db = AIMS_DB;
@@ -40,17 +45,17 @@ std::vector<std::string> Actor::get_cols(std::string db, std::string table){
 }
 
 
-std::vector<std::vector<std::string>> Actor::get_all_data(std::string db, std::string table){
+std::vector<std::vector<std::string>> Actor::get_all_data(std::string db, std::string table, std::string condition){
     if (table == "")
         table = this->table;
     if (db == "")
         db = AIMS_DB;
 
     std::vector<std::vector<std::string>> all_data;
-    USE_DB(db);
-    rset = EXECQ("SELECT * FROM " + table);
+    int num_cols = get_num_cols(db, table);
 
-    int num_cols = get_num_cols();
+    USE_DB(db);
+    rset = EXECQ("SELECT * FROM " + table + (condition != "" ? " where " + condition : ""));
 
     while (rset->next()){
         std::vector<std::string> data;
@@ -58,7 +63,6 @@ std::vector<std::vector<std::string>> Actor::get_all_data(std::string db, std::s
         for (int i=0; i<num_cols; i++){
             data.push_back(rset->getString(i+1));
         }
-
         all_data.push_back(data);
     }
 
@@ -66,12 +70,13 @@ std::vector<std::vector<std::string>> Actor::get_all_data(std::string db, std::s
 }
 
 
-std::vector<std::string> Actor::get_data(std::string db, std::string table, std::string col, std::string val){
+std::vector<std::string> Actor::get_data(std::string db, std::string table, std::string col, std::string val, std::string condition){
     std::vector<std::string> data;
-    USE_DB(db);
-    rset = EXECQ("SELECT * FROM " + table + " where " + col + "='" + val + "'");
     int num_cols = get_num_cols(db, table);
 
+    USE_DB(db);
+    rset = EXECQ("SELECT * FROM " + table + " where " + col + "='" + val + (condition != "" ? "' and " + condition : "'" ) );
+    rset->next();
     for (int i=0; i<num_cols; i++){
         data.push_back(rset->getString(i+1));
     }
@@ -138,9 +143,24 @@ sql::Statement* Admin::get_stmt(){
 }
 
 
+bool Admin::check_databases(){
+    rset = EXECQ("SHOW DATABASES");
+    std::vector<std::string> dbs;
+    while (rset->next())
+        dbs.push_back(rset->getString(1));
+    if (std::find(dbs.begin(), dbs.end(), AIMS_DB) == dbs.end() ||
+        std::find(dbs.begin(), dbs.end(), AIMS_STU) == dbs.end() ||
+        std::find(dbs.begin(), dbs.end(), AIMS_COURSE) == dbs.end()){
+            return false;
+    }
+    return true;
+}
+
+
 void Admin::get_data_in_vars(){
     USE_DB(AIMS_DB);
     rset = EXECQ("SELECT * from " ADMIN " where id='" + id + "'");
+    rset->next();
 
     name = rset->getString("Name");
     passwd = rset->getString("Passwd");
@@ -157,13 +177,13 @@ void Admin::init(){
     //         "Role char(10), Passwd char(" HASH_LENGTH "), Salt char(32))");
 
     EXEC("CREATE TABLE " ADMIN " (ID varchar(32) PRIMARY KEY, Name varchar(100), "
-            "Passwd char(" HASH_LENGTH "), Salt char(32))");
+            "Passwd char(" HASH_LENGTH "), Salt char(" SALT_SIZE "))");
 
     EXEC("CREATE TABLE " STUDENT " (ID varchar(32) PRIMARY KEY, Name varchar(100), DateOfBirth date, AdmissionDate date, "
-            "FatherName varchar(100), MotherName varchar(100), Passwd char(" HASH_LENGTH "), Salt char(32))");
+            "FatherName varchar(100), MotherName varchar(100), Passwd char(" HASH_LENGTH "), Salt char(" SALT_SIZE "))");
 
     EXEC("CREATE TABLE " FACULTY " (ID varchar(32) PRIMARY KEY, Name varchar(100), JoiningDate date, "
-            "Passwd char(" HASH_LENGTH "), Salt char(32))");
+            "Passwd char(" HASH_LENGTH "), Salt char(" SALT_SIZE "))");
 
     EXEC("CREATE TABLE " SEMESTER " (Name varchar(50) PRIMARY KEY, Start date, End date, Type char(4))");
 
@@ -187,13 +207,12 @@ void Admin::reset(){
 
 
 void Admin::insert_default_data(){
-
     if (id == ""){
         id = "adm0001.iith";
     }
 
-    EXEC("INSERT INTO " ADMIN " VALUES ('" + id + "', 'The Admin'," 
-            "'7299f3488ded4e34277fd96afcdd911449b69b111aa45f6a2bd25d168f7a87f0', 'abcd')");
+    // EXEC("INSERT INTO " ADMIN " VALUES ('" + id + "', 'The Admin'," 
+    //         "'7299f3488ded4e34277fd96afcdd911449b69b111aa45f6a2bd25d168f7a87f0', 'abcd')");
     // default password is 'admin'
 
     std::vector<std::vector<std::string>> stu_data = {
@@ -239,7 +258,7 @@ void Admin::add_course(const std::vector<std::string> &course){
     USE_DB(AIMS_COURSE);
     // EXEC("CREATE TABLE course_" + course[0] + "_" + course[3] + " (StudentId varchar(32) PRIMARY KEY, "
     // "Grade char(2), FOREIGN KEY(StudentId) REFERENCES " AIMS_DB "." STUDENT "(ID))");
-    EXEC("CREATE TABLE course_" + course[0] + "_" + course[3] + " (StudentId varchar(32) PRIMARY KEY, "
+    EXEC("CREATE TABLE course_" + course[0] + "_" + course[4] + " (StudentId varchar(32) PRIMARY KEY, "
     "Grade char(2))");
 }
 
@@ -251,20 +270,20 @@ void Admin::add_courses(const std::vector<std::vector<std::string>> &courses){
 }
 
 
-void Admin::remove_course(const std::string& id){
-    validate_value(id);
+void Admin::remove_course(const std::string& code, const std::string& sem){
+    validate_value(code);
     USE_DB(AIMS_DB);
-    EXEC("DELETE FROM " COURSE " where id='" + id + "'");
+    EXEC("DELETE FROM " COURSE " where Code='" + code + "' and Semester='" + sem + "'");
     USE_DB(AIMS_COURSE);
-    EXEC("DROP TABLE course_" + id);
+    EXEC("DROP TABLE course_" + code + "_" + sem);
 }
 
 
-void Admin::remove_courses(const std::vector<std::string> &courses){
-    for (std::string course: courses){
-        remove_course(course);
-    }
-}
+// void Admin::remove_courses(const std::vector<std::string> &courses){
+//     for (std::string course: courses){
+//         remove_course(course);
+//     }
+// }
 
 
 void Admin::add_student_to_IITH(const std::vector<std::string> &student){
@@ -424,7 +443,7 @@ void Student::dereg_course(const std::string& code){
     delete_val(stmt, AIMS_STU, "stu_" + id, "CourseCode", code);
 
     // delete from course_code_sem table of aims_course db
-    delete_val(stmt, AIMS_COURSE, "course_" + code + rset->getString("Semester"), "StudentId", id);
+    delete_val(stmt, AIMS_COURSE, "course_" + code + "_" + rset->getString("Semester"), "StudentId", id);
 }
 
 
@@ -432,7 +451,7 @@ std::pair<std::vector<std::string>, std::vector<std::vector<std::string>>> Stude
     std::vector<std::vector<std::string>> courses;
     rset = EXECQ("SELECT s.CourseCode, c.Name, c.Credits, c.Semester, c.Segment, f.Name, s.RegistrationDate, s.Grade "
                     "FROM " AIMS_STU ".stu_" + id + " as s LEFT JOIN " AIMS_DB "." COURSE " as c ON s.CourseCode = c.Code AND s.Semester = c.Semester "
-                    "LEFT JOIN " AIMS_DB "." FACULTY " as f ON s.InstructorId = f.ID LEFT JOIN " AIMS_DB "." SEMESTER " as sm ON s.Semester = sm.Name ORDER BY sm.Start");
+                    "LEFT JOIN " AIMS_DB "." FACULTY " as f ON c.InstructorId = f.ID LEFT JOIN " AIMS_DB "." SEMESTER " as sm ON s.Semester = sm.Name ORDER BY sm.Start");
     int num_cols = 8;
     std::vector<std::string> cols = {"Code", "Course", "Credits", "Semester", "Segment", "Instructor", "Reg. Date", "Grade"};
     while (rset->next()){
@@ -451,7 +470,7 @@ double Student::gpa_in_sem(const std::string& sem){
     std::string grade;
     validate_value(sem);
     USE_DB(AIMS_STU);
-    rset = EXECQ("SELECT Credit, Grade from stu_" + id + ", " AIMS_DB "." COURSE " where CourseCode=Code and Semester='" + sem + "'");
+    rset = EXECQ("SELECT c.Credits, s.Grade from stu_" + id + " as s, " AIMS_DB "." COURSE " as c where s.CourseCode=c.Code and s.Semester=c.Semester and s.Semester='" + sem + "'");
     rset->next();
     int num_courses = 0;
 
@@ -463,7 +482,8 @@ double Student::gpa_in_sem(const std::string& sem){
         gpa += (rset->getInt("Credit") * grade_to_gpa.at(grade));
         num_courses++;
     }
-
+    if (num_courses == 0)
+        return 0;
     return gpa / num_courses;
 }
 
@@ -527,6 +547,7 @@ Faculty::Faculty(sql::Statement *stmt, const std::string& id){
 void Faculty::get_data_in_vars(){
     USE_DB(AIMS_DB);
     rset = EXECQ("SELECT * FROM " FACULTY " where id='" + id + "'");
+    rset -> next();
 
     id = rset->getString("ID");
     name = rset->getString("Name");
@@ -537,29 +558,20 @@ void Faculty::get_data_in_vars(){
 
 std::vector<std::vector<std::string>> Faculty::get_courses(){
     std::vector<std::vector<std::string>> courses;
-
-    USE_DB(AIMS_DB);
-    rset = EXECQ("SELECT * FROM " COURSE " WHERE InstructorId='"+id + "'");
-
-    int num_cols = get_num_cols();
-
-    while(rset->next()){
-        std::vector<std::string> course;
-
-        for (int i=0; i<num_cols; i++){
-            course.push_back(rset->getString(i+1));
-        }
-
-        courses.push_back(course);
-    }
-
-    return courses;
+    return get_all_data(AIMS_DB, COURSE, "InstructorId=\"" + id + "\"");
 }
 
 
-std::vector<std::vector<std::string>> Faculty::get_reg_students(const std::string& course_code){
-    std::string sem = get_val(stmt, AIMS_COURSE, COURSE, "Semester", "Code", course_code);
+std::vector<std::vector<std::string>> Faculty::get_reg_students(const std::string& code, const std::string& sem){
+    rset = EXECQ("SELECT StudentId, Name, Grade from " AIMS_DB "." STUDENT ", " AIMS_COURSE ".course_" + code + "_" + sem + " where StudentId=ID");
+    return extract(rset, 3);;
+}
 
-    return get_all_data(AIMS_COURSE, "course_" + course_code + sem);
+
+int Faculty::student_count(const std::string& code){
+    std::string sem = get_val(stmt, AIMS_COURSE, COURSE, "Semester", "Code", code, "isFloating='Y'");
+    rset = EXECQ("SELECT count(*) from " AIMS_COURSE ".course_" + code + "_" + sem);
+    rset->next();
+    return rset->getInt(1);
 }
 

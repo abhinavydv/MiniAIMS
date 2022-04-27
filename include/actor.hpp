@@ -22,7 +22,6 @@ class Actor {
     std::string passwd;        // hashed password
     std::string salt;
     std::string table;
-    // std::string current_sem;
     sql::Driver *driver;
     sql::Connection *conn;
     sql::Statement *stmt;
@@ -32,11 +31,10 @@ class Actor {
     std::string get_table();
     uint32_t get_num_cols(std::string="", std::string="");
     std::vector<std::string> get_cols(std::string, std::string);
-    std::vector<std::vector<std::string>> get_all_data(std::string="", std::string="");
+    std::vector<std::vector<std::string>> get_all_data(std::string="", std::string="", std::string="");
     std::vector<std::vector<std::string>> get_multiple_data(std::string, std::string);
-    std::vector<std::string> get_data(std::string, std::string, std::string, std::string);
+    std::vector<std::string> get_data(std::string, std::string, std::string, std::string, std::string="");
     void get_data_in_vars();
-    bool authenticate(std::string);
     std::string get_id();
     std::string get_name();
     void change_passwd(std::string);
@@ -45,13 +43,13 @@ class Actor {
 
 
 class Admin: public Actor {
-
     public:
     Admin();
     Admin(sql::Statement*);
     Admin(const std::string&);
     Admin(sql::Statement*, const std::string&);
     sql::Statement* get_stmt();
+    bool check_databases();
     void get_data_in_vars();
     void init();
     void insert_default_data();
@@ -61,8 +59,8 @@ class Admin: public Actor {
     void remove_semester(const std::string&);
     void add_course(const std::vector<std::string>&);
     void add_courses(const std::vector<std::vector<std::string>>&);
-    void remove_course(const std::string&);
-    void remove_courses(const std::vector<std::string>&);
+    void remove_course(const std::string&, const std::string&);
+    // void remove_courses(const std::vector<std::string>&);
     void add_student_to_IITH(const std::vector<std::string>&);
     void add_students_to_IITH(const std::vector<std::vector<std::string>>&);
     void remove_student_from_IITH(const std::string&);
@@ -103,9 +101,10 @@ class Faculty: public Actor {
     Faculty(sql::Statement*, const std::string&);
     void get_data_in_vars();
     std::vector<std::vector<std::string>> get_courses();
-    std::vector<std::vector<std::string>> get_reg_students(const std::string&);
+    int student_count(const std::string&);
+    std::vector<std::vector<std::string>> get_reg_students(const std::string&, const std::string&);
     bool submit_grades();
-    // Can submit from csv, edit a file or from terminal one by one
+    // Can submit from csv or from terminal one by one
 };
 
 

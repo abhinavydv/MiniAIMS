@@ -2,4 +2,4 @@
 #include "actor.hpp"
 
 
-bool handle_student(sql::Statement*, std::string);
+void handle_student(sql::Statement*, std::string);

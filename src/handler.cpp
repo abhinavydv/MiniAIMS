@@ -19,20 +19,27 @@ bool is_digit(std::string str){
 }
 
 
-std::vector<std::string> str_split(std::string str, char delim){
+std::vector<std::string> str_split(std::string str, char delim, bool strip){
     std::vector<std::string> result;
     int index = 0;
     result.push_back("");
+    int i = 0;
     while (index<str.size()){
         if (str[index] == delim){
-            if(result.back() != "")
+            if(result.back() != ""){
+                if (strip)
+                    result[i] = str_strip(result.at(i));
                 result.push_back("");
+                i++;
+            }
         }
         else {
             result.back().push_back(str.at(index));
         }
         index++;
     }
+    if (strip)
+        result[i] = str_strip(result.at(i));
     if (result.back() == "")
         result.pop_back();
 
@@ -136,7 +143,7 @@ void print_line(std::vector<int> sizes){
 
 void print_data_table(const std::vector<std::string>& cols, const std::vector<std::vector<std::string>>& values){
     if (values.size() == 0){
-        std::cout << "No Data!!\n";
+        std::cout << "No Data!!\n\n";
         return;
     }
 
@@ -181,7 +188,7 @@ void print_data_table(const std::vector<std::string>& cols, const std::vector<st
         std::cout << "|\n";
     }
     print_line(sizes);
-
+    std::cout << "\n";
 }
 
 
@@ -273,11 +280,8 @@ void insert_all(sql::Statement *stmt, std::string table, std::vector<std::vector
 }
 
 
-std::string get_val(sql::Statement *stmt, std::string db, std::string table, std::string col_to_get, std::string pk_col, std::string val){
-    validate_value(col_to_get);
-    validate_value(val);
-    validate_value(pk_col);
-    sql::ResultSet *rset = EXECQ("SELECT " + col_to_get + " FROM " + db + "." + table + " WHERE " + pk_col + "='" + val + "'");
+std::string get_val(sql::Statement *stmt, std::string db, std::string table, std::string col_to_get, std::string pk_col, std::string val, std::string condition){
+    sql::ResultSet *rset = EXECQ("SELECT " + col_to_get + " FROM " + db + "." + table + " WHERE " + pk_col + "='" + val + std::string("'") + (condition != "" ? "and " + condition : ""));
     if (rset->next()){
         return rset->getString(1);
     }
@@ -291,7 +295,21 @@ void delete_val(sql::Statement* stmt, std::string db, std::string table, std::st
     validate_value(value);
     validate_value(column);
     USE_DB(db);
-    EXEC("DELETE FROM " + table + "where " + column + "='" + value + "'");
+    EXEC("DELETE FROM " + table + " where " + column + "='" + value + "'");
+}
+
+
+std::vector<std::vector<std::string>> extract(sql::ResultSet* rset, int num_cols){
+    std::vector<std::vector<std::string>> data;
+    
+    while (rset->next()){
+        std::vector<std::string> row;
+        for (int i=0; i<num_cols; i++){
+            row.push_back(rset->getString(i+1));
+        }
+        data.push_back(row);
+    }
+    return data;
 }
 
 
@@ -350,6 +368,10 @@ std::string input(const std::string prompt, bool allow_empty){
             temp = "";
             system("clear");
         }
+        else if (!check_value(temp)){
+            std::cout << RED "' and \" are not allowed in any input\n" NO_COLOR;
+            temp = "";
+        }
     }
 
     return temp;
@@ -357,25 +379,53 @@ std::string input(const std::string prompt, bool allow_empty){
 
 
 int input_int(const std::string prompt){
-    return std::stol(input(prompt));
+    std::string inp = input(prompt);
+    while (!isdigit(inp)){
+        std::cout << RED "Enter a digit only!\n" NO_COLOR;
+        inp = input(prompt);
+    }
+    return std::stol(inp);
 }
 
 
-std::string input_date(std::string prompt){
+bool check_date(std::string date){
+    // Format yyyy-mm-dd
+
+    if (!isdigit(date, '-')){
+        return false;
+    }
+    auto ymd = str_split(date, '-');
+    if (ymd.size() != 3)
+        return false;
+    else {
+        tm t;
+        t.tm_year = std::atoi(ymd[0].c_str()) - 1900;
+        t.tm_mon = std::atoi(ymd[1].c_str()) - 1;
+        t.tm_mday = std::atoi(ymd[2].c_str());
+        t.tm_hour = 0;
+        t.tm_min = 0;
+        t.tm_sec = 0;
+        auto t2 = mktime(&t);
+        return !(t.tm_year != std::atoi(ymd[0].c_str()) - 1900 || 
+                    t.tm_mon != std::atoi(ymd[1].c_str()) - 1 ||
+                    t.tm_mday != std::atoi(ymd[2].c_str())
+        );
+    }
+}
+
+
+std::string input_date(std::string prompt, bool allow_empty){
     std::string date;
     std::vector<std::string> ymd;
     while (date == ""){
-        date = input(prompt);
-        ymd = str_split(date, '-');
-        if (ymd.size() != 3)
-            date = "";
-        else {
-            tm t;
-            if (!strptime(date.c_str(), "%y%m%d", &t))
-                date = "";
+        date = input(prompt, allow_empty);
+        if (date == "" && allow_empty){
+            return "";
         }
-        if (date == "")
-            std::cout << YELLOW "Invalid date!!" NO_COLOR;
+        if (!check_date(date)){
+            date = "";
+            std::cout << YELLOW "Invalid date!!\n" NO_COLOR;
+        }
     }
 
     return date;
@@ -434,4 +484,53 @@ bool confirm(std::string prompt){
     throw LineReachedException();
 
     
+}
+
+
+bool file_exists(std::string file){
+    std::ifstream f(file);
+    return f.good();
+}
+
+
+std::vector<std::vector<std::string>> read_csv(std::string file){
+    std::vector<std::vector<std::string>> data;
+    auto lines = readlines_file(file);
+    int size = -1;
+    for (auto line: lines){
+        data.push_back(str_split(line, ',', true));
+        if (size == -1){
+            size = data.at(0).size();
+        }
+        else if (size != data.back().size()){
+            throw UnmatchingRowsException();
+        }
+    }
+    return data;
+}
+
+
+void print_vec(std::vector<std::string> vec){
+    for (auto str: vec){
+        std::cout << str << " ";
+    }
+    std::cout << "\n";
+}
+
+
+bool no_spcl_ch(std::string str){
+    for (char ch: str){
+        if (ch != '_' && (ch < '0' || (ch > '9' && ch < 'A') || (ch > 'Z' && ch < 'a') || ch > 'z'))
+            return false;
+    }
+    return true;
+}
+
+
+bool isdigit(std::string str, char ignore){
+    for (char ch: str){
+        if ((ch < '0' || ch > '9') && ch != ignore)
+            return false;
+    }
+    return true;
 }

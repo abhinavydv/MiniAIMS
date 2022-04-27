@@ -1,3 +1,4 @@
+#include "include/handler.hpp"
 #include "include/admin.hpp"
 #include "include/faculty.hpp"
 #include "include/student.hpp"
@@ -6,68 +7,106 @@ using namespace std;
 
 
 void first_run();
-bool main_prompt(sql::Statement*);
+void main_prompt(sql::Statement*);
 pair<string, string> login(sql::Statement*);
 
 
 int main(){
-    first_run();
+    try{
+        first_run();
 
-    // Create connection
-    sql::Driver *driver = get_driver_instance();
+        // Create connection
+        sql::Driver *driver = get_driver_instance();
+        std::vector<std::string> user_and_passwd = get_user_and_passwd();
+        sql::Connection *conn = driver->connect("localhost", user_and_passwd[0], user_and_passwd[1]);
+        sql::Statement *stmt = conn->createStatement();
 
-    std::vector<std::string> user_and_passwd = get_user_and_passwd();
-    sql::Connection *conn = driver->connect("localhost", user_and_passwd[0], user_and_passwd[1]);
-    sql::Statement *stmt = conn->createStatement();
+        cout << "\nWELCOME TO AIMS\n===============\n" << 
+        "Enter .b anywhere to go one step back, " << 
+        ".l to logout, .c to clear terminal and .q to quit.\n";
 
-
-    cout << "WELCOME TO AIMS\n===============\n" << 
-    "Enter .b (without quotes) anywhere to go one step back" << 
-    ", .l anywhere to logout and .q anywhere to quit." << endl;
-
-    bool done = false;
-    while (!done){
-        done = main_prompt(stmt);
+        while (true){
+            try{
+                main_prompt(stmt);
+            }
+            catch (BackException){}
+            catch (LogoutException){}
+        }
     }
+    catch (EOFException){}
+    catch (QuitException){}
 
-    cout << "\nBye\n";
+    cout << "\nBye!\n";
 
     return 0;
 }
 
 
 void first_run(){
+    std::ofstream f(ENV_FILE, ios::app);
+    bool fl = false;
+    auto uap = get_user_and_passwd();
+    if (uap.at(0) == ""){
+        uap[0] = input("MySQL Username: ");
+        string write = "\n" USER_KEY "=\"" + uap.at(0) + "\"\n";
+        f << write;
+        fl = true;
+    }
+    if (uap.at(1) == ""){
+        uap[1] = input("MySQL Password: ");
+        string write = "\n" PASSWD_KEY "=\"" + uap.at(1) + "\"\n";
+        f << write;
+        fl = true;
+    }
+    f.close();
+
+
     Admin admin;
-    admin.reset();
-    admin.insert_default_data();
+    sql::Statement* stmt = admin.get_stmt();
+    if (!admin.check_databases()){
+        admin.reset();
+        cout << "The application is being run for the first time. You are the admin now.\n";
+        string user;
+        while (user == ""){
+            user = input("Enter your username: ");
+            if (!no_spcl_ch(user)){
+                cout << RED "Username cannot contain any special character (except '_')\n";
+                user = "";
+            }
+        }
+        string name = input("Enter your Name: ");
+        string passwd = input("Enter your password: ");
+        string salt = generate_salt(SALT_SIZE_INT);
+        string passwd_hash = passwd_to_SHA256(salt, passwd);
+        USE_DB(AIMS_DB);
+        insert_val(stmt, ADMIN, {user, name, passwd_hash, salt}, {});
+
+        if (confirm("Should we enter some default data for testing?"))
+            admin.insert_default_data();
+
+        cout << "All set!\n\n";
+    }
     admin.exit();
 }
 
 
-bool main_prompt(sql::Statement *stmt){
+void main_prompt(sql::Statement *stmt){
     pair<string, string> iu;
-    try{
+    try {
         iu = login(stmt);
     }
     catch (BackException){
-        return true;
+        throw QuitException();
     }
 
-    bool done;
-
-    try {
+    while (true){
         if (iu.second == ADMIN)
-            done = handle_admin(stmt, iu.first);
+            handle_admin(stmt, iu.first);
         else if (iu.second == STUDENT)
-            done = handle_student(stmt, iu.first);
+            handle_student(stmt, iu.first);
         else if (iu.second == FACULTY)
-            done = handle_faculty(stmt, iu.first);
+            handle_faculty(stmt, iu.first);
     }
-    catch (BackException){
-        return false;
-    }
-
-    return done;
 }
 
 
@@ -94,7 +133,6 @@ pair<string, string> login(sql::Statement *stmt){
             passwd = "";
         }
     }
-
     return {id, user};
 }
 
