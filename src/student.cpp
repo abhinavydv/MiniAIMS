@@ -26,6 +26,10 @@ void handle_student(sql::Statement* stmt, std::string id){
                 cout << RED "Course isn't floating!\n" NO_COLOR;
                 code = "";
             }
+            else if (get_val(stmt, AIMS_STU, "stu_" + id, "Grade", "CourseCode", code) != ""){
+                cout << RED "Grades submitted. Cannot register!\n" << NO_COLOR;
+                code = "";
+            }
         }
         student.reg_course(code);
     }

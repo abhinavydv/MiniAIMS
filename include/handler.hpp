@@ -38,6 +38,12 @@
 #define CREATE_DB "CREATE DATABASE IF NOT EXISTS "
 #define DROP_DB "DROP DATABASE IF EXISTS "
 
+// CSV files
+#define FACULTY_CSV "data/faculty.csv"
+#define STUDENT_CSV "data/student.csv"
+#define SEMESTER_CSV "data/semester.csv"
+#define COURSE_CSV "data/course.csv"
+
 // DEFAULTS
 // The password is : '1234'
 #define PASSWORD "e9cee71ab932fde863338d08be4de9dfe39ea049bdafb342ce659ec5450b69ae" 
@@ -67,7 +73,7 @@
 
 
 bool is_digit(std::string);
-std::vector<std::string> str_split(std::string, char, bool=false);
+std::vector<std::string> str_split(std::string, char, bool=false, bool=false);
 std::string str_strip(std::string, char=' ');
 std::pair<std::string, std::string> split_pair(std::string, char, bool=false);
 std::string read_file(std::string);

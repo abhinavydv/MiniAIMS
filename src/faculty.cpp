@@ -123,7 +123,6 @@ void handle_faculty(sql::Statement* stmt, std::string id){
                 grades.push_back({stu.at(0), grade});
             }
             for (auto grade: grades){
-                USE_DB(AIMS_COURSE);
                 EXEC("UPDATE " AIMS_COURSE ".course_" + code + "_" + sem + " set Grade='" + grade.at(1) + "' where StudentId='" + grade.at(0) + "'");
                 EXEC("UPDATE " AIMS_STU ".stu_" + grade.at(0) + " set Grade='" + grade.at(1) + "' where CourseCode='" + code + "'");
             }

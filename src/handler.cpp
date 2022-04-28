@@ -19,14 +19,24 @@ bool is_digit(std::string str){
 }
 
 
-std::vector<std::string> str_split(std::string str, char delim, bool strip){
+bool is_space(std::string str){
+    for (char ch: str){
+        if (ch != 32){
+            return false;
+        }
+    }
+    return true;
+}
+
+
+std::vector<std::string> str_split(std::string str, char delim, bool strip, bool allow_empty){
     std::vector<std::string> result;
     int index = 0;
     result.push_back("");
     int i = 0;
     while (index<str.size()){
         if (str[index] == delim){
-            if(result.back() != ""){
+            if(result.back() != "" || allow_empty){
                 if (strip)
                     result[i] = str_strip(result.at(i));
                 result.push_back("");
@@ -48,6 +58,8 @@ std::vector<std::string> str_split(std::string str, char delim, bool strip){
 
 
 std::string str_strip(std::string str, char target){
+    if (is_space(str))
+        return "";
     return str.substr(str.find_first_not_of(target), str.find_last_not_of(target)+1-str.find_first_not_of(target));
 }
 
@@ -498,7 +510,7 @@ std::vector<std::vector<std::string>> read_csv(std::string file){
     auto lines = readlines_file(file);
     int size = -1;
     for (auto line: lines){
-        data.push_back(str_split(line, ',', true));
+        data.push_back(str_split(line, ',', true, true));
         if (size == -1){
             size = data.at(0).size();
         }

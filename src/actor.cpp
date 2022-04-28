@@ -206,38 +206,67 @@ void Admin::reset(){
 }
 
 
+// void Admin::insert_default_data(){
+//     // if (id == ""){
+//     //     id = "adm0001.iith";
+//     // }
+
+//     // EXEC("INSERT INTO " ADMIN " VALUES ('" + id + "', 'The Admin'," 
+//     //         "'7299f3488ded4e34277fd96afcdd911449b69b111aa45f6a2bd25d168f7a87f0', 'abcd')");
+//     // default password is 'admin'
+
+//     std::vector<std::vector<std::string>> stu_data = {
+//         {"cs21btech11001", "Abhay Shankar", "2003-06-14", NULL_STR, NULL_STR, NULL_STR, PASSWORD, SALT},
+//         {"cs21btech11002", "Abhinav Yadav", "2003-06-14", NULL_STR, NULL_STR, NULL_STR, PASSWORD, SALT},
+//         {"cs21btech11030", "Karthik Kotikalapudi", "2003-06-14", NULL_STR, NULL_STR, NULL_STR, PASSWORD, SALT},
+//         {"cs21btech11049", "Rahul Ramchandran", "2003-06-14", NULL_STR, NULL_STR, NULL_STR, PASSWORD, SALT},
+//         {"cs21btech11055", "Sadineni Abhinay", "2003-06-14", NULL_STR, NULL_STR, NULL_STR, PASSWORD, SALT},
+//         {"cs21btech11060", "Varun Gupta", "2003-06-14", NULL_STR, NULL_STR, NULL_STR, PASSWORD, SALT},
+//     };
+//     // insert_all(stmt, STUDENT, stu_data, {});
+//     add_students_to_IITH(stu_data);
+
+//     std::vector<std::vector<std::string>> faculty_data = {
+//         {"11111cs.iith", "Dr. M V Panduranga Rao", NULL_STR, PASSWORD, SALT},
+//         {"11112cs.iith", "Dr. Srijith PK", NULL_STR, PASSWORD, SALT},
+//         {"11113cs.iith", "Dr. Subramanyam Kalyansundaram", NULL_STR, PASSWORD, SALT},
+//     };
+//     // insert_all(stmt, FACULTY, faculty_data, {});
+//     add_faculties(faculty_data);
+// }
+
+
 void Admin::insert_default_data(){
-    if (id == ""){
-        id = "adm0001.iith";
+    auto faculties = read_csv(FACULTY_CSV);
+    auto students = read_csv(STUDENT_CSV);
+    auto semesters = read_csv(SEMESTER_CSV);
+    auto courses = read_csv(COURSE_CSV);
+
+    add_faculties(faculties);
+    add_students_to_IITH(students);
+    
+    for (auto sem: semesters){
+        add_semester(sem);
     }
 
-    // EXEC("INSERT INTO " ADMIN " VALUES ('" + id + "', 'The Admin'," 
-    //         "'7299f3488ded4e34277fd96afcdd911449b69b111aa45f6a2bd25d168f7a87f0', 'abcd')");
-    // default password is 'admin'
+    add_courses(courses);
 
-    std::vector<std::vector<std::string>> stu_data = {
-        {"cs21btech11001", "Abhay Shankar", "2003-06-14", NULL_STR, NULL_STR, NULL_STR, PASSWORD, SALT},
-        {"cs21btech11002", "Abhinav Yadav", "2003-06-14", NULL_STR, NULL_STR, NULL_STR, PASSWORD, SALT},
-        {"cs21btech11030", "Karthik Kotikalapudi", "2003-06-14", NULL_STR, NULL_STR, NULL_STR, PASSWORD, SALT},
-        {"cs21btech11049", "Rahul Ramchandran", "2003-06-14", NULL_STR, NULL_STR, NULL_STR, PASSWORD, SALT},
-        {"cs21btech11055", "Sadineni Abhinay", "2003-06-14", NULL_STR, NULL_STR, NULL_STR, PASSWORD, SALT},
-        {"cs21btech11060", "Varun Gupta", "2003-06-14", NULL_STR, NULL_STR, NULL_STR, PASSWORD, SALT},
-    };
-    // insert_all(stmt, STUDENT, stu_data, {});
-    add_students_to_IITH(stu_data);
-
-    std::vector<std::vector<std::string>> faculty_data = {
-        {"11111cs.iith", "Dr. M V Panduranga Rao", NULL_STR, PASSWORD, SALT},
-        {"11112cs.iith", "Dr. Srijith PK", NULL_STR, PASSWORD, SALT},
-        {"11113cs.iith", "Dr. Subramanyam Kalyansundaram", NULL_STR, PASSWORD, SALT},
-    };
-    // insert_all(stmt, FACULTY, faculty_data, {});
-    add_faculties(faculty_data);
+    for (auto stu: students){
+        for (auto course: courses){
+            add_student_to_course(stu.at(0), course.at(0));
+        }
+        EXEC("UPDATE " AIMS_STU ".stu_" + stu.at(0) + " set Grade='A' where Semester='UG21_NOV21_MAR22'");
+    }
+    for (auto course: courses){
+        if (course.at(4) == "UG21_NOV21_MAR22")
+            EXEC("UPDATE " AIMS_COURSE ".course_" + course.at(0) + "_" + course.at(4) + " set Grade='A'");
+    }
 }
 
 
 void Admin::add_semester(const std::vector<std::string>& sem){
     validate_value(sem.at(0));
+    USE_DB(AIMS_DB);
     insert_val(stmt, SEMESTER, sem, {});
 }
 
@@ -414,7 +443,7 @@ void Student::reg_course(const std::string& code){
     validate_value(code);
     // Insert course in Stu_id table in aims_stu db
     USE_DB(AIMS_STU);
-    rset = EXECQ("SELECT * FROM " AIMS_DB "." COURSE " where code='" + code + "'");
+    rset = EXECQ("SELECT * FROM " AIMS_DB "." COURSE " as c," AIMS_DB "." SEMESTER " as s where c.Semester=s.Name and code='" + code + "' ORDER BY s.Start DESC");
     rset->next();
     std::vector<std::string> course = {
         rset->getString("Code"),

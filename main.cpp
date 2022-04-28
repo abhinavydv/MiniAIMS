@@ -13,6 +13,8 @@ pair<string, string> login(sql::Statement*);
 
 int main(){
     try{
+        Admin admin;
+        admin.clear_all();
         first_run();
 
         // Create connection
@@ -84,7 +86,7 @@ void first_run(){
         if (confirm("Should we enter some default data for testing?"))
             admin.insert_default_data();
 
-        cout << "All set!\n\n";
+        cout << GREEN "All set!\n\n" NO_COLOR;
     }
     admin.exit();
 }
