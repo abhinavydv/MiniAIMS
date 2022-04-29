@@ -38,7 +38,6 @@ A menu driven miniature AIMS CLI application.
 
 ## Getting Started (Linux Only)
 ### Install MySQL
-<!-- Refer [this guide](https://www.digitalocean.com/community/tutorials/how-to-install-mysql-on-ubuntu-20-04) to install MySQL Server on your system -->
 `$ sudo apt install mysql-server`  
 `$ sudo systemctl start mysql`
 
