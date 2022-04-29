@@ -89,6 +89,7 @@ void insert_val(sql::Statement*, std::string, std::vector<std::string>, std::vec
 void insert_all(sql::Statement*, std::string, std::vector<std::vector<std::string>>, std::vector<std::string>);
 std::string get_val(sql::Statement*, std::string, std::string, std::string, std::string, std::string, std::string="");
 void delete_val(sql::Statement*, std::string, std::string, std::string, std::string);
+void update_val(sql::Statement*, std::string, std::string, std::vector<std::string>, std::vector<std::string>, std::string, std::string, std::string="");
 std::vector<std::vector<std::string>> extract(sql::ResultSet*, int);
 bool check_integrity(sql::Statement*, std::string, std::string, std::string);
 std::string get_current_date();

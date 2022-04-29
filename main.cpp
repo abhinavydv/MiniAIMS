@@ -43,21 +43,33 @@ int main(){
 
 
 void first_run(){
-    std::ofstream f(ENV_FILE, ios::app);
-    bool fl = false;
     auto uap = get_user_and_passwd();
-    if (uap.at(0) == ""){
-        uap[0] = input("MySQL Username: ");
-        string write = "\n" USER_KEY "=\"" + uap.at(0) + "\"\n";
-        f << write;
-        fl = true;
-    }
-    if (uap.at(1) == ""){
-        uap[1] = input("MySQL Password: ");
-        string write = "\n" PASSWD_KEY "=\"" + uap.at(1) + "\"\n";
-        f << write;
-        fl = true;
-    }
+    std::ofstream f(ENV_FILE, ios::out);
+    do {
+        if (uap.at(0) == ""){
+            uap[0] = input("MySQL Username: ");
+            // string write = "\n" USER_KEY "=\"" + uap.at(0) + "\"\n";
+            // f << write;
+        }
+        if (uap.at(1) == ""){
+            uap[1] = input("MySQL Password: ");
+            // string write = "\n" PASSWD_KEY "=\"" + uap.at(1) + "\"\n";
+            // f << write;
+        }
+        try {
+            sql::Driver* d = get_driver_instance();
+            sql::Connection* conn = d->connect("localhost", uap.at(0), uap.at(1));
+            delete conn;
+        }
+        catch (sql::SQLException){
+            cout << RED "MySQL username or password is wrong!\n" NO_COLOR;
+            uap[0] = "";
+            uap[1] = "";
+        }
+
+    } while (uap.at(0) == "" || uap.at(1) == "");
+    f << "\n" USER_KEY << "=\"" << uap.at(0) << "\"\n";
+    f << "\n" PASSWD_KEY << "=\"" << uap.at(1) << "\"\n";
     f.close();
 
 

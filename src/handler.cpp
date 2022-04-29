@@ -311,6 +311,21 @@ void delete_val(sql::Statement* stmt, std::string db, std::string table, std::st
 }
 
 
+void update_val(sql::Statement* stmt, std::string db, std::string table, std::vector<std::string> cols, std::vector<std::string> vals, std::string col, std::string val, std::string condition){
+    USE_DB(db);
+    std::string sql = "UPDATE " + table + " set ";
+    for (int i=0; i<cols.size(); i++){
+        if (i!=0)
+            sql += ", ";
+        sql += (cols.at(i) + "='" + vals.at(i) + "' ");
+    }
+    sql += ("where " + col + "='" + val + "'");
+    sql += (condition == "" ? "" : " and " + condition);
+    // std::cout << sql << "\n";
+    EXEC(sql);
+}
+
+
 std::vector<std::vector<std::string>> extract(sql::ResultSet* rset, int num_cols){
     std::vector<std::vector<std::string>> data;
     
@@ -358,6 +373,7 @@ std::string input(const std::string prompt, bool allow_empty){
     std::string temp;
     while (temp == ""){
         std::cout << prompt;
+        std::cin.clear();
         std::getline(std::cin, temp);
         if (std::cin.eof())
             throw EOFException();
@@ -381,7 +397,7 @@ std::string input(const std::string prompt, bool allow_empty){
             system("clear");
         }
         else if (!check_value(temp)){
-            std::cout << RED "' and \" are not allowed in any input\n" NO_COLOR;
+            std::cout << RED "' and \" are not allowed in any input!\n" NO_COLOR;
             temp = "";
         }
     }
@@ -430,13 +446,13 @@ std::string input_date(std::string prompt, bool allow_empty){
     std::string date;
     std::vector<std::string> ymd;
     while (date == ""){
-        date = input(prompt, allow_empty);
+        date = str_strip(input(prompt, allow_empty));
         if (date == "" && allow_empty){
             return "";
         }
         if (!check_date(date)){
             date = "";
-            std::cout << YELLOW "Invalid date!!\n" NO_COLOR;
+            std::cout << RED "Invalid date!!\n" NO_COLOR;
         }
     }
 
@@ -447,7 +463,7 @@ std::string input_date(std::string prompt, bool allow_empty){
 int get_choice(int low, int high){
     int op = input_int("Enter a choice: ");
     while (op < low || op > high){
-        std::cout << "Invalid choice!!" << std::endl;
+        std::cout << RED "Invalid choice!!" NO_COLOR << std::endl;
         op = input_int("Enter a choice: ");
     }
     return op;
@@ -489,7 +505,7 @@ bool confirm(std::string prompt){
         else if (yn == "N" || yn == "n")
             return false;
         else {
-            std::cout << "Wrong choice!\nEnter Y or N: ";
+            std::cout << RED "Wrong choice!\nEnter Y or N: " NO_COLOR;
             yn = "";
         }
     }

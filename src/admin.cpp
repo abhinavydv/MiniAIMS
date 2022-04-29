@@ -116,7 +116,7 @@ void update_courses(Admin& admin){
                     sem = "";
                 }
                 else if (!no_spcl_ch(code+sem)){
-                    cout << RED "No special character allowed (except '_')\n";
+                    cout << RED "No special character allowed (except '_')\n" NO_COLOR;
                     code = "";
                     sem = "";
                 }
@@ -200,16 +200,15 @@ void update_courses(Admin& admin){
                     sem = "";
                 }
             }
-            cout << "data retrieving\n";
             auto data = admin.get_data(AIMS_DB, COURSE, "Code", code, "Semester='" + sem + "'");
-            cout << "data retrieved\n";
             auto cols = admin.get_cols(AIMS_DB, COURSE);
 
             auto new_data = update_data(cols, data, {0, 4});
 
-            USE_DB(AIMS_DB);
-            EXEC("DELETE FROM " COURSE " where Code='" + data.at(0) + "' and Semester='" + data.at(4) + "'");
-            insert_val(stmt, COURSE, new_data, {});
+            // USE_DB(AIMS_DB);
+            // EXEC("DELETE FROM " COURSE " where Code='" + data.at(0) + "' and Semester='" + data.at(4) + "'");
+            // insert_val(stmt, COURSE, new_data, {});
+            update_val(stmt, AIMS_DB, COURSE, cols, new_data, "Code", code, "Semester='" + sem + "'");
         }
         if (op != 0){
             cout << GREEN "DONE!\n" NO_COLOR;
@@ -293,9 +292,10 @@ void update_students(Admin& admin){
                 if (new_data[3] == ""){
                     new_data[3] = data.at(3);
                 }
-                delete_val(stmt, AIMS_DB, STUDENT, "ID", id);
-                USE_DB(AIMS_DB);
-                insert_val(stmt, STUDENT, new_data, {});
+                // delete_val(stmt, AIMS_DB, STUDENT, "ID", id);
+                // USE_DB(AIMS_DB);
+                // insert_val(stmt, STUDENT, new_data, {});
+                update_val(stmt, AIMS_DB, STUDENT, admin.get_cols(AIMS_DB, STUDENT), new_data, "ID", id);
             }
         }
         if (op != 0){
@@ -357,9 +357,10 @@ void update_faculty(Admin& admin){
                 if (val != ""){
                     data[2] = val;
                 }
-                delete_val(stmt, AIMS_DB, FACULTY, "ID", id);
-                USE_DB(AIMS_DB);
-                insert_val(stmt, FACULTY, data, {});
+                // USE_DB(AIMS_DB);
+                // delete_val(stmt, AIMS_DB, FACULTY, "ID", id);
+                // insert_val(stmt, FACULTY, data, {});
+                update_val(stmt, AIMS_DB, FACULTY, admin.get_cols(AIMS_DB, FACULTY), data, "id", id);
             }
         }
         if (op != 0){
