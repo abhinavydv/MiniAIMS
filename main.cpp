@@ -13,8 +13,6 @@ pair<string, string> login(sql::Statement*);
 
 int main(){
     try{
-        Admin admin;
-        admin.clear_all();
         first_run();
 
         // Create connection
