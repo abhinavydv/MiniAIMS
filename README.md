@@ -48,7 +48,7 @@ A menu driven miniature AIMS CLI application.
 `mysql> grant all privileges on aims_db.* to '<user-name>'@'localhost';`  
 `mysql> grant all privileges on aims_stu.* to '<user-name>'@'localhost';`  
 `mysql> grant all privileges on aims_course.* to '<user-name>'@'localhost';`  
-`mysql> flush privileges;`
+`mysql> flush privileges;`  
 `mysql> quit;`
 
 
