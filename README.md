@@ -39,7 +39,9 @@ A menu driven miniature AIMS CLI application.
 ## Getting Started (Linux Only)
 ### Install MySQL
 `$ sudo apt install mysql-server`  
-`$ sudo systemctl start mysql`
+`$ sudo systemctl start mysql`  
+`$ sudo mysql_secure_installation`  
+Follow the on-screen instructions to finish the setup
 
 ### Configure MySQL
 `$ sudo mysql`    

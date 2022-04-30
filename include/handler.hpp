@@ -71,41 +71,77 @@
 #define EXECQ(sql) stmt->executeQuery(sql);
 #define USE_DB(db) EXEC("use" + std::string(" ") + db)
 
-
-bool is_digit(std::string);
-std::vector<std::string> str_split(std::string, char, bool=false, bool=false);
-std::string str_strip(std::string, char=' ');
-std::pair<std::string, std::string> split_pair(std::string, char, bool=false);
-std::string read_file(std::string);
-std::vector<std::string> readlines_file(std::string);
+// returns if `str` contains only digits
+bool is_digit(std::string str);
+/*
+split the `str` with `delim` as the delimiter. Remove white spaces if strip=true. 
+keep empty splitted strings while splitting if allow_empty=true
+*/
+std::vector<std::string> str_split(std::string str, char delim, bool strip=false, bool allow_empty=false);
+// Remove trailing and leading `target` characters from str
+std::string str_strip(std::string str, char target=' ');
+// split `str` using `delim` as a delimiter. Remove white spaces if strip=true.
+std::pair<std::string, std::string> split_pair(std::string str, char delim, bool strip=false);
+// returns contents of the file named `file_name`
+std::string read_file(std::string file_name);
+// returns a vector containing each line of `file`
+std::vector<std::string> readlines_file(std::string file_name);
+// load environment data from .env file
 std::map<std::string, std::string> loadenv();
+// extract user name and password from .env file
 std::vector<std::string> get_user_and_passwd();
-void print_data_table(const std::vector<std::string>&, const std::vector<std::vector<std::string>>&);
-std::string generate_salt(size_t=32);
-std::string passwd_to_SHA256(const std::string&, const std::string&);
-bool check_value(std::string);
-void validate_value(std::string);
-void insert_val(sql::Statement*, std::string, std::vector<std::string>, std::vector<std::string>);
-void insert_all(sql::Statement*, std::string, std::vector<std::vector<std::string>>, std::vector<std::string>);
-std::string get_val(sql::Statement*, std::string, std::string, std::string, std::string, std::string, std::string="");
-void delete_val(sql::Statement*, std::string, std::string, std::string, std::string);
-void update_val(sql::Statement*, std::string, std::string, std::vector<std::string>, std::vector<std::string>, std::string, std::string, std::string="");
-std::vector<std::vector<std::string>> extract(sql::ResultSet*, int);
-bool check_integrity(sql::Statement*, std::string, std::string, std::string);
+// prints a table with headings from `cols` and values from `values`
+void print_data_table(const std::vector<std::string>& cols, const std::vector<std::vector<std::string>>& values);
+// generates a random salt of length `size`
+std::string generate_salt(size_t size=32);
+// returns hash of `salt` + `password`
+std::string passwd_to_SHA256(const std::string& salt, const std::string& passwd);
+// check if an entered value conatins forbidden symbols
+bool check_value(std::string value);
+// insert `values` in corresponding `cols` of `table`
+void insert_val(sql::Statement* stmt, std::string table, std::vector<std::string> values, std::vector<std::string> cols);
+// insert all `values` in corresponding `cols` of `table`
+void insert_all(sql::Statement* stmt, std::string table, std::vector<std::vector<std::string>> values, std::vector<std::string> cols);
+// return value from `db.table` from `col_to_get` where `pk_col`=`val` and `condition` (if not empty) is satisfied
+std::string get_val(sql::Statement* stmt, std::string db, std::string table, std::string col_to_get, std::string pk_col, std::string val, std::string condition="");
+// delete value from `db.table` where `col`=`val`
+void delete_val(sql::Statement* stmt, std::string db, std::string table, std::string col, std::string val);
+// upadte each column of `cols` of `db.table` with value from `values` where `col` = `val` and condition (if not empty) is satisfied
+void update_val(sql::Statement*, std::string db, std::string table, std::vector<std::string> cols, std::vector<std::string> vals, std::string col, std::string val, std::string condition="");
+// returns all data present in rset
+std::vector<std::vector<std::string>> extract(sql::ResultSet* rset, int num_cols);
+// returns current date
 std::string get_current_date();
-std::string get_user_type(sql::Statement*, std::string);
-std::string input(const std::string="", bool=false);
-int input_int(const std::string="");
-bool check_date(std::string);
-std::string input_date(std::string="", bool=false);
-int get_choice(int, int);
-std::vector<std::string> update_data(std::vector<std::string>, std::vector<std::string>, std::vector<int>);
-bool confirm(std::string="");
-bool file_exists(std::string);
-std::vector<std::vector<std::string>> read_csv(std::string);
-void print_vec(std::vector<std::string>);
-bool no_spcl_ch(std::string);
-bool isdigit(std::string, char=0);
+// returns if user is admin, faculty or student
+std::string get_user_type(sql::Statement* stmt, std::string id);
+/*
+takes input from user after showing `prompt`
+handles some commands.
+validates entered values for forbidden characters.
+allows user to enter empty string if allow_empty=true
+*/
+std::string input(const std::string prompt="", bool allow_empty=false);
+// takes an int as input from user
+int input_int(const std::string prompt="");
+// check if the date is valid
+bool check_date(std::string date);
+// take a date as input from user
+std::string input_date(std::string prompt="", bool allow_empty=false);
+// get an integer `a` from user : `low` <= `a` <= `high`
+int get_choice(int low, int high);
+// prompt user to enter new data for each col in `cols` except cols at index from `non_updatables`
+std::vector<std::string> update_data(std::vector<std::string> cols, std::vector<std::string> values, std::vector<int> non_updatables);
+// Ask user for a confirmation after showing the `prompt`.
+bool confirm(std::string prompt="");
+// check if file named `file` exists
+bool file_exists(std::string file);
+// read CSV data from `file`
+std::vector<std::vector<std::string>> read_csv(std::string file);
+// void print_vec(std::vector<std::string>);
+// returns true if str contains no special characters except '_'
+bool no_spcl_ch(std::string str);
+// check if str contains only digits after ignoring `ignore`
+bool isdigit(std::string str, char ignore=0);
 
 // Constant vars
 const std::map<std::string, int> grade_to_gpa = {  // TODO: Verify these values
