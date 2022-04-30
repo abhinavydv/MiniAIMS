@@ -53,6 +53,7 @@ A menu driven miniature AIMS CLI application.
 
 ### Install Dependencies
 `$ sudo apt install make g++ libssl-dev libmysqlcppconn-dev`
+`$ sudo apt install libssl-dev`
 
 ### Running the application
 This app can be run using make  
