@@ -86,6 +86,7 @@ std::vector<std::string> Actor::get_data(std::string db, std::string table, std:
 
 
 void Actor::exit(){
+    // free resources
     delete stmt;
     delete conn;
 }
@@ -110,7 +111,6 @@ Admin::Admin(){
 
 Admin::Admin(const std::string &id){
     table = ADMIN;
-    validate_value(id);
     this->id = id;
     driver = get_driver_instance();
 
@@ -131,7 +131,6 @@ Admin::Admin(sql::Statement *stmt){
 
 Admin::Admin(sql::Statement *stmt, const std::string &id){
     table = ADMIN;
-    validate_value(id);
     this->id = id;
     this->stmt = stmt;
     get_data_in_vars();
@@ -148,6 +147,8 @@ bool Admin::check_databases(){
     std::vector<std::string> dbs;
     while (rset->next())
         dbs.push_back(rset->getString(1));
+
+    // if any database is missing then returns false
     if (std::find(dbs.begin(), dbs.end(), AIMS_DB) == dbs.end() ||
         std::find(dbs.begin(), dbs.end(), AIMS_STU) == dbs.end() ||
         std::find(dbs.begin(), dbs.end(), AIMS_COURSE) == dbs.end()){
@@ -237,6 +238,7 @@ void Admin::reset(){
 
 
 void Admin::insert_default_data(){
+    // read the data from CSV files
     auto faculties = read_csv(FACULTY_CSV);
     auto students = read_csv(STUDENT_CSV);
     auto semesters = read_csv(SEMESTER_CSV);
@@ -255,25 +257,25 @@ void Admin::insert_default_data(){
         for (auto course: courses){
             add_student_to_course(stu.at(0), course.at(0));
         }
+        // Update the grade in aims_stu database
         EXEC("UPDATE " AIMS_STU ".stu_" + stu.at(0) + " set Grade='A' where Semester='UG21_NOV21_MAR22'");
     }
     for (auto course: courses){
         if (course.at(4) == "UG21_NOV21_MAR22")
+            // Update the grade in aims_course database
             EXEC("UPDATE " AIMS_COURSE ".course_" + course.at(0) + "_" + course.at(4) + " set Grade='A'");
     }
 }
 
 
 void Admin::add_semester(const std::vector<std::string>& sem){
-    validate_value(sem.at(0));
     USE_DB(AIMS_DB);
     insert_val(stmt, SEMESTER, sem, {});
 }
 
 
-void Admin::remove_semester(const std::string& name){
-    validate_value(name);
-    delete_val(stmt, AIMS_DB, SEMESTER, "Name", name);
+void Admin::remove_semester(const std::string& sem){
+    delete_val(stmt, AIMS_DB, SEMESTER, "Name", sem);
 }
 
 
@@ -300,9 +302,11 @@ void Admin::add_courses(const std::vector<std::vector<std::string>> &courses){
 
 
 void Admin::remove_course(const std::string& code, const std::string& sem){
-    validate_value(code);
+    // delete value from aims_db.Course table
     USE_DB(AIMS_DB);
     EXEC("DELETE FROM " COURSE " where Code='" + code + "' and Semester='" + sem + "'");
+
+    // Delete the aims_course.course_<code>_<sem> table
     USE_DB(AIMS_COURSE);
     EXEC("DROP TABLE course_" + code + "_" + sem);
 }
@@ -316,9 +320,11 @@ void Admin::remove_course(const std::string& code, const std::string& sem){
 
 
 void Admin::add_student_to_IITH(const std::vector<std::string> &student){
+    // insert value in aims_db.Student table
     USE_DB(AIMS_DB);
     insert_val(stmt, STUDENT, student, {});
 
+    // Create aims_stu.stu_<id> table
     USE_DB(AIMS_STU);
     EXEC("CREATE TABLE stu_" + student[0] + " (CourseCode varchar(32), "
     "Semester varchar(50), RegistrationDate date, grade char(2), PRIMARY KEY(CourseCode, Semester))");
@@ -333,16 +339,18 @@ void Admin::add_students_to_IITH(const std::vector<std::vector<std::string>> &st
 
 
 void Admin::remove_student_from_IITH(const std::string& id){
-    validate_value(id);
+    // delete value from aims_db.Student table
     USE_DB(AIMS_DB);
     EXEC("DELETE FROM " STUDENT " where id='" + id + "'");
+
+    // delete aims_stu.stu_<id> table
     USE_DB(AIMS_STU);
     EXEC("DROP TABLE stu_" + id);
 }
 
 
-void Admin::remove_students_from_IITH(const std::vector<std::string> &students){
-    for(std::string id: students){
+void Admin::remove_students_from_IITH(const std::vector<std::string> &ids){
+    for(std::string id: ids){
         remove_student_from_IITH(id);
     }
 }
@@ -354,11 +362,11 @@ void Admin::add_student_to_course(const std::string& stu_id, const std::string& 
 }
 
 
-void Admin::add_students_to_course(const std::vector<std::string> &stu_ids, const std::string& course_code){
-    for (std::string stu_id: stu_ids){
-        add_student_to_course(stu_id, course_code);
-    }
-}
+// void Admin::add_students_to_course(const std::vector<std::string> &stu_ids, const std::string& course_code){
+//     for (std::string stu_id: stu_ids){
+//         add_student_to_course(stu_id, course_code);
+//     }
+// }
 
 
 void Admin::remove_student_from_course(const std::string& stu_id, const std::string& course_code){
@@ -367,11 +375,11 @@ void Admin::remove_student_from_course(const std::string& stu_id, const std::str
 }
 
 
-void Admin::remove_students_from_course(const std::vector<std::string> &stu_ids, const std::string& course_code){
-    for (std::string stu_id: stu_ids){
-        remove_student_from_course(stu_id, course_code);
-    }
-}
+// void Admin::remove_students_from_course(const std::vector<std::string> &stu_ids, const std::string& course_code){
+//     for (std::string stu_id: stu_ids){
+//         remove_student_from_course(stu_id, course_code);
+//     }
+// }
 
 
 void Admin::add_faculty(const std::vector<std::string> &faculty){
@@ -440,7 +448,6 @@ void Student::get_data_in_vars(){
 
 
 void Student::reg_course(const std::string& code){
-    validate_value(code);
     // Insert course in Stu_id table in aims_stu db
     USE_DB(AIMS_STU);
     rset = EXECQ("SELECT * FROM " AIMS_DB "." COURSE " as c," AIMS_DB "." SEMESTER " as s where c.Semester=s.Name and code='" + code + "' ORDER BY s.Start DESC");
@@ -462,9 +469,6 @@ void Student::reg_course(const std::string& code){
 
 
 void Student::dereg_course(const std::string& code){
-    validate_value(id);
-
-
     // delete from stu_id table of aims_stu db
     USE_DB(AIMS_STU);
     rset = EXECQ("SELECT * FROM stu_" + id + " where CourseCode='" + code + "'");
@@ -497,7 +501,6 @@ std::pair<std::vector<std::string>, std::vector<std::vector<std::string>>> Stude
 double Student::gpa_in_sem(const std::string& sem){
     double gpa = 0;
     std::string grade;
-    validate_value(sem);
     USE_DB(AIMS_STU);
     rset = EXECQ("SELECT c.Credits, s.Grade from stu_" + id + " as s, " AIMS_DB "." COURSE " as c where s.CourseCode=c.Code and s.Semester=c.Semester and s.Semester='" + sem + "'");
     rset->next();
@@ -599,6 +602,7 @@ std::vector<std::vector<std::string>> Faculty::get_reg_students(const std::strin
 
 int Faculty::student_count(const std::string& code){
     std::string sem = get_val(stmt, AIMS_COURSE, COURSE, "Semester", "Code", code, "isFloating='Y'");
+    // select no. of students
     rset = EXECQ("SELECT count(*) from " AIMS_COURSE ".course_" + code + "_" + sem);
     rset->next();
     return rset->getInt(1);

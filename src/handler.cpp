@@ -21,7 +21,7 @@ bool is_digit(std::string str){
 
 bool is_space(std::string str){
     for (char ch: str){
-        if (ch != 32){
+        if (ch != 32){   // ASCII character for 32 is space
             return false;
         }
     }
@@ -36,6 +36,7 @@ std::vector<std::string> str_split(std::string str, char delim, bool strip, bool
     int i = 0;
     while (index<str.size()){
         if (str[index] == delim){
+            // if delimiter is encountered then proceed if last string was not empty or allow_empty is true
             if(result.back() != "" || allow_empty){
                 if (strip)
                     result[i] = str_strip(result.at(i));
@@ -44,6 +45,7 @@ std::vector<std::string> str_split(std::string str, char delim, bool strip, bool
             }
         }
         else {
+            // append the character at end of the last string
             result.back().push_back(str.at(index));
         }
         index++;
@@ -86,21 +88,10 @@ std::pair<std::string, std::string> split_pair(std::string str, char delim, bool
 
 
 std::string read_file(std::string file_name){
-    std::string data;
-    // char temp;
-    std::fstream file;
-    file.open(file_name, std::ios::in);
-
+    std::fstream file(file_name, std::ios::in);
     std::stringstream buffer;
-
     buffer << file.rdbuf();
-    data = buffer.str();
-
-    // while(!file.eof()){
-    //     file >> temp;
-    //     data.push_back(temp);
-    // }
-    return data;
+    return buffer.str();
 }
 
 
@@ -240,11 +231,11 @@ bool check_value(std::string value){
 }
 
 
-void validate_value(std::string value){
-    if (!check_value(value)){
-        throw MyException("Symbols ' and \" are not allowed");
-    }
-}
+// void validate_value(std::string value){
+//     if (!check_value(value)){
+//         throw MyException("Symbols ' and \" are not allowed");
+//     }
+// }
 
 
 void insert_val(sql::Statement *stmt, std::string table, std::vector<std::string> values, std::vector<std::string> cols){
@@ -273,7 +264,6 @@ void insert_val(sql::Statement *stmt, std::string table, std::vector<std::string
             query.append("NULL,");
             continue;
         }
-        validate_value(value);
         query.append("'" + value + "',");
     }
     query.pop_back();
@@ -304,8 +294,6 @@ std::string get_val(sql::Statement *stmt, std::string db, std::string table, std
 
 
 void delete_val(sql::Statement* stmt, std::string db, std::string table, std::string column, std::string value){
-    validate_value(value);
-    validate_value(column);
     USE_DB(db);
     EXEC("DELETE FROM " + table + " where " + column + "='" + value + "'");
 }
