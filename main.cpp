@@ -42,8 +42,12 @@ int main(){
 }
 
 
+// checks whether the software is run for the first time and asks for
+// MySQL UserID and password if not present in .env file and for new admin and password
+// if databases are not present
 void first_run(){
     auto uap = get_user_and_passwd();
+    bool fl = !file_exists(".env");
     std::ofstream f(ENV_FILE, ios::out);
     do {
         if (uap.at(0) == ""){
@@ -62,9 +66,11 @@ void first_run(){
             delete conn;
         }
         catch (sql::SQLException){
-            cout << RED "MySQL username or password is wrong!\n" NO_COLOR;
+            if (fl)
+                cout << RED "MySQL username or password is wrong! or MySQL server is not running!\n" NO_COLOR;
             uap[0] = "";
             uap[1] = "";
+            fl = true;
         }
 
     } while (uap.at(0) == "" || uap.at(1) == "");
@@ -75,7 +81,7 @@ void first_run(){
 
     Admin admin;
     sql::Statement* stmt = admin.get_stmt();
-    if (!admin.check_databases()){
+    if (!admin.check_databases()){  // check if all databases exist
         admin.reset();
         cout << "The application is being run for the first time. You are the admin now.\n";
         string user;
@@ -102,6 +108,7 @@ void first_run(){
 }
 
 
+// The main prompt that lets user login
 void main_prompt(sql::Statement *stmt){
     pair<string, string> iu;
     try {
@@ -122,6 +129,7 @@ void main_prompt(sql::Statement *stmt){
 }
 
 
+// retuns username and usertype after user is logged in
 pair<string, string> login(sql::Statement *stmt){
     string id;
     string user;

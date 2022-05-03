@@ -137,7 +137,6 @@ bool confirm(std::string prompt="");
 bool file_exists(std::string file);
 // read CSV data from `file`
 std::vector<std::vector<std::string>> read_csv(std::string file);
-// void print_vec(std::vector<std::string>);
 // returns true if str contains no special characters except '_'
 bool no_spcl_ch(std::string str);
 // check if str contains only digits after ignoring `ignore`

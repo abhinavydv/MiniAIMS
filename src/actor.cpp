@@ -27,7 +27,7 @@ uint32_t Actor::get_num_cols(std::string db, std::string table){
     rset = EXECQ("SELECT count(*) FROM information_schema.columns where table_schema='" + db + "' and table_name='" + table + "'");
     if(rset->next())
         num = rset->getInt(1);
-    else
+    else    // if table is not present, return 0
         num = 0;
 
     return num;
@@ -58,12 +58,12 @@ std::vector<std::vector<std::string>> Actor::get_all_data(std::string db, std::s
     rset = EXECQ("SELECT * FROM " + table + (condition != "" ? " where " + condition : ""));
 
     while (rset->next()){
-        std::vector<std::string> data;
+        std::vector<std::string> data;  // a row in table
 
         for (int i=0; i<num_cols; i++){
             data.push_back(rset->getString(i+1));
         }
-        all_data.push_back(data);
+        all_data.push_back(data);       // add each row to whole table data
     }
 
     return all_data;

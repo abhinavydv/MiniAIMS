@@ -198,9 +198,8 @@ void print_data_table(const std::vector<std::string>& cols, const std::vector<st
 std::string generate_salt(size_t size){
     std::string salt;
     srand(time(NULL));
-    char characters[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890~!@#$%^&*()_-=_+{}[]|\\;:.,<>/?`~";
     for (size_t i=0; i<size; i++){
-        salt.push_back(characters[rand()%sizeof(characters)]);
+        salt.push_back(rand()%('~' - '!')+'!');
     }
 
     return salt;
