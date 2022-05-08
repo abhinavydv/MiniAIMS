@@ -9,11 +9,12 @@ void handle_admin(sql::Statement* stmt, string id){
     string msg = "\n1. Semesters\n"
                 "2. Courses\n"
                 "3. Students\n"
-                "4. Faculty\n\n";
+                "4. Faculty\n"
+                "5. Change password\n\n";
 
     cout << msg;
 
-    int op = get_choice(1, 4);
+    int op = get_choice(1, 5);
     try{
         if (op == 1)
             while (true)
@@ -27,6 +28,9 @@ void handle_admin(sql::Statement* stmt, string id){
         else if (op == 4)
             while (true)
                 update_faculty(admin);
+        else if (op == 5) {
+            admin.change_passwd(get_new_passwd(stmt, ADMIN, id));
+        }
     }
     catch (BackException){}
 }

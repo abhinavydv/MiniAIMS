@@ -141,6 +141,8 @@ std::vector<std::vector<std::string>> read_csv(std::string file);
 bool no_spcl_ch(std::string str);
 // check if str contains only digits after ignoring `ignore`
 bool isdigit(std::string str, char ignore=0);
+// returns a new password entered by the user after verifying the old passwd of the user
+std::string get_new_passwd(sql::Statement * stmt, std::string table, std::string id);
 
 // Constant vars
 const std::map<std::string, int> grade_to_gpa = {  // TODO: Verify these values

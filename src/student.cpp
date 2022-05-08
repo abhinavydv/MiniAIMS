@@ -9,10 +9,11 @@ void handle_student(sql::Statement* stmt, std::string id){
     std::string msg = "\n1. Register for course\n"
                     "2. Deregister from course\n"
                     "3. View Courses\n"
-                    "4. Get CGPA\n\n";
+                    "4. Get CGPA\n"
+                    "5. Change Password\n\n";
 
     cout << msg;
-    int op = get_choice(1, 4);
+    int op = get_choice(1, 5);
 
     if (op == 1){
         string code;
@@ -57,9 +58,13 @@ void handle_student(sql::Statement* stmt, std::string id){
         auto sems = student.get_sems();
         for (auto sem: sems){
             double gpa = student.gpa_in_sem(sem);
-            cout << sem << ": " << gpa << "\n";
+            if (gpa != 0)
+                cout << sem << ": " << gpa << "\n";
         }
         cout << "Your CGPA till now is: " << student.calc_CGPA() << "\n";
+    }
+    else if (op == 5){
+        student.change_passwd(get_new_passwd(stmt, STUDENT, id));
     }
     if (op == 1 || op == 2){
         cout << GREEN "Done!\n" NO_COLOR;

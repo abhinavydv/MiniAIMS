@@ -36,7 +36,7 @@ uint32_t Actor::get_num_cols(std::string db, std::string table){
 
 std::vector<std::string> Actor::get_cols(std::string db, std::string table){
     std::vector<std::string> cols;
-    sql::ResultSet *rset = EXECQ("SELECT COLUMN_NAME FROM information_schema.columns where table_schema='" + db + "' and table_name='" + table + "'");
+    sql::ResultSet *rset = EXECQ("SELECT COLUMN_NAME FROM information_schema.columns where table_schema='" + db + "' and table_name='" + table + "' order by ordinal_position");
     while (rset->next()){
         cols.push_back(rset->getString(1));
     }
@@ -82,6 +82,11 @@ std::vector<std::string> Actor::get_data(std::string db, std::string table, std:
     }
 
     return data;
+}
+
+
+void Actor::change_passwd(std::string new_pass){
+    EXEC("update " AIMS_DB "." + table + " set Passwd='" + passwd_to_SHA256(get_val(stmt, AIMS_DB, table, "Salt", "ID", id), new_pass) + "' where ID='" + id + "'");
 }
 
 
@@ -511,7 +516,8 @@ double Student::gpa_in_sem(const std::string& sem){
         if (grade == ""){
             continue;
         }
-        gpa += (rset->getInt("Credit") * grade_to_gpa.at(grade));
+        // std::cout << grade;
+        gpa += (rset->getInt("Credits") * grade_to_gpa.at(grade));
         num_courses++;
     }
     if (num_courses == 0)
@@ -534,14 +540,20 @@ std::vector<std::string> Student::get_sems(){
 
 double Student::calc_CGPA(){
     double cgpa = 0;
+    double gpa;
+    int sem_count = 0;
     auto sems = get_sems();
     for (auto sem: sems){
-        cgpa += gpa_in_sem(sem);
+        gpa = gpa_in_sem(sem);
+        if (gpa!=0){
+            cgpa += gpa;
+            sem_count++;
+        }
     }
-    if (sems.size() == 0)
+    if (sem_count == 0)
         return 0;
 
-    return cgpa / sems.size();
+    return cgpa / sem_count;
 }
 
 

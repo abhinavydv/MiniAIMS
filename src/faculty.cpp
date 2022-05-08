@@ -8,13 +8,17 @@ void handle_faculty(sql::Statement* stmt, std::string id){
     string msg = "\n1. View Courses\n"
                 "2. View Registered students\n"
                 "3. Insert grades from csv\n"
-                "4. Insert grades one by one\n\n";
+                "4. Insert grades one by one\n"
+                "5. Change Passsword\n\n";
 
     cout << msg;
-    int op = get_choice(1, 4);
+    int op = get_choice(1, 5);
 
     if (op == 1){
         print_data_table(faculty.get_cols(AIMS_DB, COURSE), faculty.get_courses());
+    }
+    else if (op == 5){
+        faculty.change_passwd(get_new_passwd(stmt, FACULTY, id));
     }
     else {
         string code;

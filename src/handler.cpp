@@ -549,3 +549,22 @@ bool isdigit(std::string str, char ignore){
     }
     return true;
 }
+
+
+bool check_passwd(sql::Statement *stmt, std::string passwd, std::string table, std::string id){
+    return passwd_to_SHA256(get_val(stmt, AIMS_DB, table, "Salt", "ID", id), passwd) ==  get_val(stmt, AIMS_DB, table, "Passwd", "ID", id);
+}
+
+
+std::string get_new_passwd(sql::Statement *stmt, std::string table, std::string id){
+    std::string new_pass;
+    do {
+        if (check_passwd(stmt, input("Enter old password: "), table, id)){
+            new_pass = input("Enter new passwd: ");
+        }
+        else {
+            std::cout << RED "Wrong Password\n" NO_COLOR;
+        }
+    } while (new_pass == "");
+    return new_pass;
+}

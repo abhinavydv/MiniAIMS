@@ -41,6 +41,7 @@ class Actor {
     void get_data_in_vars();
     std::string get_id();
     std::string get_name();
+    void change_passwd(std::string new_pass);
     void exit();
 };
 
